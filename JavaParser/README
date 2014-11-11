@@ -1,0 +1,35 @@
+Towards a symbolic simulator for PCode, this is a PCode Interpreter.
+It uses a DOM-based XML parser to translate XML PCode into Java IR.
+
+        PCodeParser p = new PCodeParser(args[0]);
+        p.parseProgram(p.topNodes);
+
+Top-level Java classes correspond to the PCode XML element types,
+PCodeProgram, PCodeFunction, PCodeBlock, Varnode, PCodeOp, etc.
+
+To run the interpreter, assuming you're at the directory above "com":
+
+java -cp . com.galois.symbolicSimulator.PCodeParser fib.xml
+
+Parsing function _fib
+Parsing function _main
+Parsing function _printf
+>
+
+At this point, you select an entry point, with the run command:
+
+> run _main
+Starting _main
+>
+
+Here you can "list" (list the next 10 lines from the current PC)
+"list all" - dumps the entire PCode program, current register and memory state
+"print <spacename>" to print a specific space (e.g., register) or "next" to
+execute the next instruction. Pressing return is an alias for next.
+You can add breakpoints to functions, or macro-addresses,
+
+> break _fib
+> break 0x34
+
+And you can cause execution to continue until a breakpoint is reached
+(or an exception is thrown) with "continue".
