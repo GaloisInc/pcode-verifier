@@ -19,8 +19,6 @@ public class PCodeMachineState {
 		spaces.put("unique",   new PCodeSpace("unique",   p.archSpec));
 		spaces.put("const",    new PCodeSpace("const",    p.archSpec));
 		spaces.put("ram",      program.dataSegment);
-		// TODO - should we put the code space here? 
-		// Probably not...we don't examine it the same way		
 	}
 
 	public PCodeSpace getSpace(String spaceName) {
@@ -68,16 +66,15 @@ public class PCodeMachineState {
 		Varnode rsp = new Varnode(regs, (long)0x20, 8);
 		Varnode r14 = new Varnode(regs, (long)0xb0, 8);
 		Varnode rbx = new Varnode(regs, (long)0x18, 8);
-		Varnode rMystery = new Varnode(regs, (long)0x38, 8);
-		Varnode rZeroMystery = new Varnode(regs, (long)0x0, 8);
+		Varnode rdi = new Varnode(regs, (long)0x38, 8); // input
+		Varnode rax = new Varnode(regs, (long)0x0, 8); // output
 		rbp.storeImmediate(0x4000l); 
 		rsp.storeImmediate(0x4000l);
 		r14.storeImmediate(0x2l);
 		rbx.storeImmediate(0xf00dl);
-		rMystery.storeImmediate(0x1l); // parameter?
-		rZeroMystery.storeImmediate(0xcafel);
-		// TODO - initialize the stack memory, since we're bothering to point at it...
-		// trying this:
-		rsp.storeIndirect(rZeroMystery, program.dataSegment);
+		rdi.storeImmediate(0x7l); // asking for fib(7), which should be 13 (0xd)
+		rax.storeImmediate(0xcafel);
+		// initialize the stack at least a bit:
+		rsp.storeIndirect(rax, program.dataSegment);
 	}
 }

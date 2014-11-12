@@ -31,16 +31,20 @@ public class PCodeSpace {
 		String asciiCol = "";
 		if (name.equals("register")) {
 			int count = 0;
+			int lastKey = 0;
 			for (Iterator<Integer> ks = contents.keySet().iterator() ; ks.hasNext(); ) {
 				Integer k = ks.next();
-				if (count % 8 == 0) {
-					ret += "0x" + Integer.toHexString(k.intValue()) + ":\t";
+				int thisKey = k.intValue();
+				if (count % 8 == 0 || thisKey > lastKey + 1) {
+					ret += "0x" + Integer.toHexString(thisKey) + ":\t";
+					count++; // make space for these tags
 				}
 				Integer next = contents.get(k);
 				ret += Integer.toHexString(0xff & next.intValue()) + "\t";
 				if (++count % 8 == 0) {
 					ret += "\n";
 				}
+				lastKey = thisKey;
 			}
 		} else {
 			int count = 0;

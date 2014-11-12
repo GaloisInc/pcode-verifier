@@ -51,6 +51,10 @@ public class PCodeParser {
 	}
 
 	public static void main(String[] args) {
+		if (args.length == 0) {
+			System.out.println("Usage: PCodeParser pcodefile.xml");
+			return;
+		}
 		PCodeParser p = new PCodeParser(args[0]);
 		p.parseProgram(p.topNodes);
 		Scanner in = new Scanner(System.in);

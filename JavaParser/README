@@ -22,14 +22,83 @@ At this point, you select an entry point, with the run command:
 Starting _main
 >
 
-Here you can "list" (list the next 10 lines from the current PC)
-"list all" - dumps the entire PCode program, current register and memory state
-"print <spacename>" to print a specific space (e.g., register) or "next" to
-execute the next instruction. Pressing return is an alias for next.
-You can add breakpoints to functions, or macro-addresses,
+Here you can "list" (list the next 10 lines from the current PC) "list all" -
+dumps the entire PCode program, current register and memory state "print
+<spacename>" to print a specific space (e.g., register) or "next" to execute
+the next instruction. Pressing return is an alias for next.  You can add
+breakpoints to functions, or macro-addresses,
 
 > break _fib
 > break 0x34
 
 And you can cause execution to continue until a breakpoint is reached
-(or an exception is thrown) with "continue".
+(or an exception is thrown) with "continue" (or cont).
+
+At least some of it works , because if you assign register 0x38 (x86 rdi) to
+be the input to _fib, and run the program, when the program halts, register 0x00
+(x86 rax) seems to contain the n'th Fibonacci number.
+
+Here's a sample run:
+
+--------------------snip-----------------
+Parsing function _fib
+Parsing function _main
+Parsing function _printf
+> run _fib
+Starting _fib
+> print register
+Space register, length = 184:
+0x0:    fe  ca  0   0   0   0   0   
+0x7:    0   0x18:   d   f0  0   0   0   
+0x1d:   0   0   0   0   40  0   0   
+0x24:   0   0   0   0   0   40  0   
+0x2b:   0   0   0   0   0   0x38:   7   
+0x39:   0   0   0   0   0   0   0   
+0xb0:   2   0   0   0   0   0   0   
+0xb7:   0   
+> cont
+...
+<block@34>
+  0x34 (0): LOAD (register8)0x18 <- (register8)0x20
+    0x34 (1): INT_ADD (register8)0x20 <- (register8)0x20 <op> (const8)0x8
+  0x35 (0): LOAD (register8)0xb0 <- (register8)0x20
+    0x35 (1): INT_ADD (register8)0x20 <- (register8)0x20 <op> (const8)0x8
+  0x37 (0): LOAD (register8)0x28 <- (register8)0x20
+    0x37 (1): INT_ADD (register8)0x20 <- (register8)0x20 <op> (const8)0x8
+  0x38 (0): LOAD (register8)0x288 <- (register8)0x20
+    0x38 (1): INT_ADD (register8)0x20 <- (register8)0x20 <op> (const8)0x8
+    0x38 (2): RETURN (register8)0x288
+error: Attempted to fetch opcode out of range @ cafe
+> java.lang.Exception: Attempted to fetch opcode out of range @ cafe
+    at com.galois.symbolicSimulator.PCodeCodeSpace.microAddrOfMacroInstr(PCodeSpace.java:117)
+    at com.galois.symbolicSimulator.PCodeInterpreter.step(PCodeInterpreter.java:81)
+    at com.galois.symbolicSimulator.PCodeInterpreter.runInteractive(PCodeInterpreter.java:419)
+    at com.galois.symbolicSimulator.PCodeParser.main(PCodeParser.java:72)
+print register
+Space register, length = 524:
+0x0:    d   0   0   0   0   0   0   
+0x7:    0   0x18:   d   f0  0   0   0   
+0x1d:   0   0   0   8   40  0   0   
+0x24:   0   0   0   0   0   40  0   
+0x2b:   0   0   0   0   0   0x38:   1   
+0x39:   0   0   0   0   0   0   0   
+0xb0:   2   0   0   0   0   0   0   
+0xb7:   0   0x200:  0   0x206:  0   0   0x20b:  0   0x288:  fe  ca  0   0   0   0   
+0x28e:  0   0   
+> 
+--------------------snip-----------------
+note 0x0 contains "d" which is 13, and indeed the 7th Fibonacci number.
+
+Things to do - verify each opcode does what it's supposed to do, especially
+wrt. endianness.
+
+The intro to p-code document has some mysteries worth clearing up, and there
+are many things to do before this is close to complete:
+
+ * the description of LOAD and STORE have an interesting discussion about the use of the machine word-size
+ * LOAD and STORE also have a 3-operand variant, but not seen in the wild
+ * LOAD and STORE's weird "space pivot" - are we handling it right every time.
+ * A number of opcodes still aren't implemented, like INT_SCARRY, etc.
+ * Currently not bothering to zero-out unique memory (mostly because it hasn't affected correctness, and also it's nice to have those values around for debugging).
+ * Don't know how named parameters in p-code will come across.
+ * ... and many other things.
