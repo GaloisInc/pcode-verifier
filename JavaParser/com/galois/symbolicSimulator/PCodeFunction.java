@@ -10,10 +10,14 @@ public class PCodeFunction {
 	public String toString(PCodeMachineState m) {
 		String ret = name + ":\n";
 		if (macroEntryPoint != null) { 
-			int microPC = m.program.codeSegment.microAddrOfVarnode(macroEntryPoint);
-			for (int i = 0; i < length; i++) {
-				PCodeOp o = m.program.codeSegment.fetch(microPC+i);
-				ret += o.toString() + "\n";
+			try {
+				int microPC = m.program.codeSegment.microAddrOfVarnode(macroEntryPoint);
+				for (int i = 0; i < length; i++) {
+					PCodeOp o = m.program.codeSegment.fetch(microPC+i);
+					ret += o.toString() + "\n";
+				}
+			} catch (Exception e) {
+				ret += "ERROR IN XLATE - Unable to fetch " + macroEntryPoint + "\n";
 			}
 		} else {
 			ret += "<external function>\n";

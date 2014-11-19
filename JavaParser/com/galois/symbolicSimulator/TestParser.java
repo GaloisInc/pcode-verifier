@@ -2,6 +2,8 @@ package com.galois.symbolicSimulator;
 
 import static org.junit.Assert.*;
 
+import java.math.BigInteger;
+
 import org.junit.*;
 
 public class TestParser {
@@ -31,15 +33,15 @@ public class TestParser {
 			PCodeSpace regs = m.spaces.get("register");
 			PCodeSpace c = m.spaces.get("const");
 			
-			Varnode r0 = new Varnode(regs, (long)0x0, 8);
-			Varnode r1 = new Varnode(regs, (long)0x8, 8);
-			Varnode c1 = new Varnode(c, (long)0x1, 8);
-			Varnode cFood = new Varnode(c, (long) 0xf00dl, 8);
+			Varnode r0 = new Varnode(regs, BigInteger.ZERO, 8);
+			Varnode r1 = new Varnode(regs, BigInteger.valueOf(0x8), 8);
+			Varnode c1 = new Varnode(c, BigInteger.ONE, 8);
+			Varnode cFood = new Varnode(c, BigInteger.valueOf(0xf00dl), 8);
 			
 			r0.storeImmediate(0x123);
 			r1.storeImmediate(0x0f00dl);
  
-			assertEquals("Storing food failed", (long)(r1.fetch() & 0xffff), 0xf00dl);
+			assertEquals("Storing food failed", (r1.fetch().longValueExact() & 0xffff), 0xf00dl);
 			assertEquals("Const 1 failed", 1, c1.fetch());
 			assertEquals("Const f00d failed", 0xf00dl, cFood.fetch());
 			assertEquals("Const byte 1 failed", 1, c1.fetchByte(0));

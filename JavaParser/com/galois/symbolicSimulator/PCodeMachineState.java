@@ -1,5 +1,6 @@
 package com.galois.symbolicSimulator;
 
+import java.math.BigInteger;
 import java.util.Dictionary;
 import java.util.Enumeration;
 import java.util.Hashtable;
@@ -32,7 +33,6 @@ public class PCodeMachineState {
 			spaces.put(spaceName, ret);
 			System.out.println("creating space " + spaceName);
 		}
-		ret.ensureCapacity(offset);
 		return ret;
 	}
 	
@@ -62,12 +62,12 @@ public class PCodeMachineState {
 	public void initMachineStateForFunctionCall() throws Exception {
 		
 		PCodeSpace regs = spaces.get("register");
-		Varnode rbp = new Varnode(regs, (long)0x28, 8);
-		Varnode rsp = new Varnode(regs, (long)0x20, 8);
-		Varnode r14 = new Varnode(regs, (long)0xb0, 8);
-		Varnode rbx = new Varnode(regs, (long)0x18, 8);
-		Varnode rdi = new Varnode(regs, (long)0x38, 8); // input
-		Varnode rax = new Varnode(regs, (long)0x0, 8); // output
+		Varnode rbp = new Varnode(regs, BigInteger.valueOf(0x28l), 8);
+		Varnode rsp = new Varnode(regs, BigInteger.valueOf(0x20l), 8);
+		Varnode r14 = new Varnode(regs, BigInteger.valueOf(0xb0l), 8);
+		Varnode rbx = new Varnode(regs, BigInteger.valueOf(0x18l), 8);
+		Varnode rdi = new Varnode(regs, BigInteger.valueOf(0x38l), 8); // input
+		Varnode rax = new Varnode(regs, BigInteger.ZERO, 8); // output
 		rbp.storeImmediate(0x4000l); 
 		rsp.storeImmediate(0x4000l);
 		r14.storeImmediate(0x2l);

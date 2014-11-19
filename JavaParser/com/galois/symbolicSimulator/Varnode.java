@@ -1,19 +1,21 @@
 package com.galois.symbolicSimulator;
 
+import java.math.BigInteger;
+
 // The PCode abstraction for memory - registers, ram, and temporary values
 public class Varnode {
 	PCodeArchSpec arch;
 	PCodeProgram p;
 	String space_name;
 	PCodeSpace space;
-	long offset;
+	BigInteger offset;
 	int size;
 	
 
 	public Varnode (PCodeProgram p) {
 		arch = null;
 		space_name = null;
-		offset = -1;
+		offset = null;
 		size = -1;
 		p.addVarnode(this); 
 	}
@@ -21,7 +23,7 @@ public class Varnode {
 	// When the parser constructs a varnode, its space is saved by name,
 	// later, if we want to run the program, the interpreter calls "loadVarnodes"
 	// to save the PCodeSpaces in the "space" field
-	public Varnode (PCodeProgram p, String spn, long off, int sz) {
+	public Varnode (PCodeProgram p, String spn, BigInteger off, int sz) {
 		arch = p.archSpec;
 		space_name = spn;
 		offset = off;
@@ -30,17 +32,17 @@ public class Varnode {
 	}
 	// This variant creates a Varnode when we have the PCodeSpace in hand,
 	// so doesn't bother adding it to the program's varnode list
-	public Varnode (PCodeSpace sp, long off, int sz) {
+	public Varnode (PCodeSpace sp, BigInteger destOffset, int sz) {
 		arch = sp.arch;
 		space = sp;
 		space_name = sp.name;
-		offset = off;
+		offset = destOffset;
 		size = sz;
 	}
 
 	public String toString() {
 		// TODO: should include the contents here - iterate through size bytes @ offset
-		return "(" + space_name + size +")" + "0x" + Integer.toHexString((int)offset);
+		return "(" + space_name + size +")" + "0x" + offset.toString(16);
 	}
 	
 	int fetchByte(int i) throws Exception {
@@ -52,45 +54,49 @@ public class Varnode {
 			System.out.println("storeByte to Const Space?");
 			// TODO - should exit here? won't happen with proper PCode...
 		}
-		space.contents.put((int) (offset+i), val & 0xff);
+		space.contents.put(offset.add(BigInteger.valueOf(i)), val & 0xff);
 	}
 	// this varnode is an array of bytes within a space.
 	// fetch returns "size-bytes" from offset interpreted as a word
 	// if big-endian, the zero'th byte is the most-significant byte
 	//    otherwise the zero'th byte is the least-significant
 	// byte0 | byte1 | byte2 ... byteN
-	long fetch() {
+	BigInteger fetch() {
 		if (space.constSpace) {
 			return offset;
 		}
-		long ret = 0;
+		BigInteger ret = BigInteger.ZERO;
 		// in terms of fenceposts, the final + is not followed by a shift
 		// so if we do the shifts first then the +, that should do the trick
 		if (arch.bigEndianP) {
-			for (long b = offset; b < offset+size; b++) {
-				ret = ret << 8;
-				Integer v = space.contents.get(new Integer((int)b));
+			for (int i = 0; i < size; i++) {
+				ret = ret.shiftLeft(8);
+				Integer v = space.contents.get(offset.add(BigInteger.valueOf(i)));
 				if (v == null) {
 					System.out.println("Warning: fetching uninitialized word");
 				} else {
-					ret += v.intValue();
+					ret = ret.add(BigInteger.valueOf(v.intValue()));
 				}
 			}
 		} else {
-			for (long b = offset + size - 1; b >= offset; b--) {
-				ret = ret << 8;
-				Integer v = space.contents.get(new Integer((int)b));
+			for (int i = size - 1; i >= 0; i--) {
+				ret = ret.shiftLeft(8);
+				Integer v = space.contents.get(offset.add(BigInteger.valueOf(i)));
 				if (v == null) {
-					System.out.println("Warning: fetching uninitialized word @" +
-							Integer.toHexString((int)b));
+					System.out.println("Warning: fetching uninitialized word @0x" +
+							offset.add(BigInteger.valueOf(i)).toString(16));
 				} else {
-					ret += v.intValue();
+					ret = ret.add(BigInteger.valueOf(v.intValue()));
 				}
 			}
 		}
 		return ret;
 	}
-	
+
+	void storeImmediate(BigInteger val) throws Exception {
+		storeImmediate(val.longValueExact());
+	}
+
 	// stores up to 8 bytes of an immediate value into this varnode
 	// TODO: Java's signed longs will cause a problem if we're dealing with really
 	//       big numbers...
@@ -99,17 +105,15 @@ public class Varnode {
 		if (space.constSpace) {
 			throw new Exception("storing into constant-space");
 		}
-		if (offset + size >= destSpace.length) {
-			destSpace.length = (int) offset + size;
-		}
 		if (arch.bigEndianP) {
-			for (long b = offset + size - 1; b >= offset; b--) {
-				destSpace.contents.put(new Integer((int) b), (int) (val & 0xff));
+			// for (long b = offset + size - 1; b >= offset; b--) {
+			for (int i = size - 1; i >= 0; i--) {
+				destSpace.contents.put(offset.add(BigInteger.valueOf(i)), (int) (val & 0xff));
 				val = val >> 8;
 			}
 		} else {
-			for (long b = offset; b < offset+size; b++) {
-				destSpace.contents.put(new Integer((int) b), (int) (val & 0xff));
+			for (int i = 0; i < size; i++) {
+				destSpace.contents.put(offset.add(BigInteger.valueOf(i)), (int) (val & 0xff));
 				val = val >> 8;
 			}
 		}
@@ -119,7 +123,7 @@ public class Varnode {
 	//    [this] <- src
 	void storeIndirect(Varnode src, PCodeSpace destSpace) throws Exception {
 		// assert(this.isRegister);
-		long destOffset = this.fetch();
+		BigInteger destOffset = this.fetch();
 		Varnode ramPointer = new Varnode(destSpace, destOffset, src.size);
 		src.copyTo(ramPointer);
 	}
@@ -145,10 +149,10 @@ public class Varnode {
 			Integer srcVal = space.getByte(this.offset, (int) i);
 			if (srcVal == null) {
 				srcVal = new Integer((int) 0);
-				System.out.println("Warning: copyTo from uninitialized word @" +
-						Integer.toHexString((int)(this.offset + i)));
+				System.out.println("Warning: copyTo from uninitialized word @0x" +
+						offset.add(BigInteger.valueOf(i)).toString(16));
 			}
-			dest.space.contents.put(new Integer((int) (dest.offset + i)), srcVal);
+			dest.space.contents.put(dest.offset.add(BigInteger.valueOf(i)), srcVal);
 		}
 	}
 

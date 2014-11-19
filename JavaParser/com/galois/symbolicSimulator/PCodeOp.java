@@ -1,17 +1,19 @@
 package com.galois.symbolicSimulator;
 
+import java.math.BigInteger;
+
 // OpCodes
 public class PCodeOp {
 	PCodeOpCode opcode = null;
 	Varnode input0 = null;
 	Varnode output = null;
 	Varnode input1 = null;
-	int offset;
+	BigInteger offset;
 	int uniq;
 	boolean blockStart = false;
 	
 
-	public PCodeOp(PCodeOpCode code, Varnode o, Varnode i0, Varnode i1, int off, int u, boolean firstInBlock) {
+	public PCodeOp(PCodeOpCode code, Varnode o, Varnode i0, Varnode i1, BigInteger off, int u, boolean firstInBlock) {
 		opcode = code;
 		input0 = i0;
 		input1 = i1;
@@ -28,10 +30,10 @@ public class PCodeOp {
 	
 	public String toString() {
 		String ret = "";
-		if (blockStart) ret += "<block@" + Integer.toHexString(offset) + ">\n";
+		if (blockStart) ret += "<block@" + offset.toString(16) + ">\n";
 		ret += "  ";
 		if (uniq > 0) ret += "  ";
-		ret += "0x" + Integer.toHexString(offset) + " (" + uniq + "): ";
+		ret += "0x" + offset.toString(16) + " (" + uniq + "): ";
 		ret += opcode.name() + " ";
 		if (output != null) ret += output.toString();
 		else ret += "<null>";

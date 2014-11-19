@@ -1,5 +1,6 @@
 package com.galois.symbolicSimulator;
 
+import java.math.BigInteger;
 import java.util.ArrayList;
 import java.util.Enumeration;
 import java.util.Iterator;
@@ -16,11 +17,11 @@ import org.w3c.dom.NodeList;
 
 class AddrValuePair {
 	public AddrValuePair(String addr, String val) {
-		address = Integer.parseInt(addr.substring(2), 16);
+		address = PCodeParser.parseBigHex(addr.substring(2));
 		value = Integer.parseInt(val.substring(2), 16);
 	}
-	int address;
-	int value;
+	BigInteger address;
+	Integer value;
 }
 
 // Top-level class for parsing PCode XML
@@ -35,7 +36,7 @@ public class PCodeParser {
 	NodeList topNodes;
 
 	PCodeProgram program;
-
+	
 	public PCodeParser(String file) {
 		try {
 			dbf = DocumentBuilderFactory.newInstance();
@@ -162,7 +163,8 @@ public class PCodeParser {
 		String opcode = op.getAttribute("mnemonic");
 		NodeList argNodes = op.getChildNodes();
 		Varnode[] args = new Varnode[3];
-		int offset = -1, uniq = -1;
+		BigInteger offset = null;
+		int uniq = -1;
 
 		int argi = 0;
 		for (int i = 0; i < argNodes.getLength(); i++) {
@@ -175,7 +177,7 @@ public class PCodeParser {
 					args[argi++] = parseVarnode(argE);
 				} else if (argTag.equals("seqnum")) {
 					uniq = Integer.decode(argE.getAttribute("uniq"));
-					offset = Integer.decode(argE.getAttribute("offset"));
+					offset = parseBigHex(argE.getAttribute("offset"));
 				} else if (argTag.equals("void")){ 
 					continue;
 				} else if (argTag.equals("spaceid")){
@@ -197,20 +199,15 @@ public class PCodeParser {
 		String size = argNode.getAttribute("size");
 		ret.arch = program.archSpec;
 
-		try {
-			ret.offset = Long.parseUnsignedLong(offset.substring(2), 16);
-			ret.size = Integer.decode(size);
-			ret.space_name = argNode.getAttribute("space");
-		} catch (NumberFormatException e) {
-			System.out.println("Couldn't find an important attribute in " + argNode);
-			e.printStackTrace();
-		}
+		ret.offset = parseBigHex(offset);
+		ret.size = Integer.decode(size);
+		ret.space_name = argNode.getAttribute("space");
 		return ret;
 	}
 
 	public void parseDataSegment(Node ds, PCodeSpace dataSegment) {
 		NodeList addrBytePairs = ds.getChildNodes();
-		int maxAddr = 0;
+		// long maxAddr = 0;
 		ArrayList<AddrValuePair> addrPairs = new ArrayList<>();
 		for (int i = 0; i < addrBytePairs.getLength(); i++) {
 			Node avpNode = addrBytePairs.item(i);
@@ -220,17 +217,23 @@ public class PCodeParser {
 				String val = avpElt.getAttribute("value");
 				AddrValuePair avp = new AddrValuePair(addr, val);
 				addrPairs.add(avp);
-				if (avp.address > maxAddr) {
-					maxAddr = avp.address;
-				}
+				// if (avp.address > maxAddr) {maxAddr = avp.address;}
 			} 
 		}
-		dataSegment.length = maxAddr; // todo later - check if base + offset would be better
+		// dataSegment.length = maxAddr; // todo later - check if base + offset would be better
 		for (Iterator<AddrValuePair>i = addrPairs.iterator(); i.hasNext();) {
 			AddrValuePair e = i.next();
-			dataSegment.contents.put(new Integer(e.address), new Integer(e.value));
+			dataSegment.contents.put(e.address, e.value);
 			// System.out.println("@ " + e.address + " -> " + e.value);
 		}
 		dataSegment.wordsize = 8;
 	}
+	public static BigInteger parseBigHex(String hexNum) {
+		if (hexNum.startsWith("0x")) {
+			hexNum = hexNum.substring(2);
+		}
+		BigInteger t = new BigInteger(hexNum,16);
+		return t;
+	}
+
 }
