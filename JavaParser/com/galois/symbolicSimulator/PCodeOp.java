@@ -11,9 +11,11 @@ public class PCodeOp {
 	BigInteger offset;
 	int uniq;
 	boolean blockStart = false;
+	boolean funcStart = false; // if this is the first op in a fn
+	PCodeFunction function = null;
 	
 
-	public PCodeOp(PCodeOpCode code, Varnode o, Varnode i0, Varnode i1, BigInteger off, int u, boolean firstInBlock) {
+	public PCodeOp(PCodeOpCode code, Varnode o, Varnode i0, Varnode i1, BigInteger off, int u, boolean firstInBlock, boolean firstInFunc, PCodeFunction func) {
 		opcode = code;
 		input0 = i0;
 		input1 = i1;
@@ -21,6 +23,8 @@ public class PCodeOp {
 		offset = off;
 		uniq = u;
 		blockStart = firstInBlock;
+		funcStart = firstInFunc;
+		function = func;
 	}
 	
 	public PCodeOp(PCodeOpCode code, Varnode i0) {
@@ -29,8 +33,17 @@ public class PCodeOp {
 	}
 	
 	public String toString() {
+		return toString(null);
+	}
+	public String toString(PCodeProgram p) {
 		String ret = "";
-		if (blockStart) ret += "<block@" + offset.toString(16) + ">\n";
+		if (blockStart) {
+			if (funcStart) {
+				ret += "<function " + function.name + " @ 0x" + offset.toString(16) + ">\n";
+			} else {
+				ret += "<block@" + offset.toString(16) + ">\n";
+			}
+		}
 		ret += "  ";
 		if (uniq > 0) ret += "  ";
 		ret += "0x" + offset.toString(16) + " (" + uniq + "): ";
@@ -38,18 +51,21 @@ public class PCodeOp {
 		if (output != null) ret += output.toString();
 		else ret += "<null>";
 		if (numArgs() == 0) {
+			if (opcode == PCodeOpCode.CALL && p != null) {
+				String functionName = p.lookupFunctionNameFromAddr(output.offset);
+				ret += " <" + functionName + ">";
+			}
+
 			return ret;
 		}
 		ret += " <- ";
 		if (input0 != null) ret += input0.toString();
 		else ret += "<null>";
-		if (numArgs() == 1) { 
-			return ret;
-		} else {
+		if (numArgs() > 1) {
 			if (input1 != null) ret += " <op> " + input1.toString();
 			else ret += " <op> <null>";
-			return ret;
 		}
+		return ret;
 	}
 	
 	enum PCodeOpCode {

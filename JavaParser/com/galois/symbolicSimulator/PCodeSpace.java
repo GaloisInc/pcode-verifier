@@ -31,7 +31,9 @@ public class PCodeSpace {
 			for (Iterator<BigInteger> ks = contents.keySet().iterator() ; ks.hasNext(); ) {
 				BigInteger k = ks.next();
 				int thisKey = k.intValue();
-				if (count % 8 == 0 || thisKey > lastKey + 1) {
+				if (count % 8 == 0) {
+					ret += "0x" + k.toString(16) + ":\t";
+				} else if (thisKey > lastKey + 1) {
 					ret += "0x" + k.toString(16) + ":\t";
 					count++; // make space for these tags
 				}
@@ -81,7 +83,7 @@ public class PCodeSpace {
 				return ret;
 			} else {
 				throw new Exception("fetch from unitialized memory @ " + 
-						base.add(BigInteger.valueOf(offset)));
+						base.add(BigInteger.valueOf(offset)).toString(16));
 			}
 		}
 	}

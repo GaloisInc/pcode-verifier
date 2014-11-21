@@ -81,7 +81,6 @@ public class PCodeParser {
 				System.out.println("{browse|run <func_name>|quit}");
 			}
 			System.out.print("> ");
-
 		}
 		System.out.println("Bye!");
 	}
@@ -114,6 +113,7 @@ public class PCodeParser {
 		PCodeFunction ret = new PCodeFunction();
 		NodeList functionElts = n.getChildNodes();
 		int startPC = program.codeSegment.microIndex;
+		boolean firstBlock = true;
 		for (int i = 0; i < functionElts.getLength(); i++) {
 			Node funcNode = functionElts.item(i);
 			if (!(funcNode instanceof Element)) continue;
@@ -126,11 +126,16 @@ public class PCodeParser {
 			} else if (eltName.startsWith("parameter_description")) {
 				// need to give Sean a function with defined parameters to know what to do here
 			} else if (eltName.startsWith("basicblock")) {
-				Varnode newBlockHead = parseBlock(funcElt);
+				Varnode newBlockHead = parseBlock(funcElt, firstBlock, ret);
+				firstBlock = false;
 				if (ret.macroEntryPoint == null) {
 					ret.macroEntryPoint = newBlockHead;
 				}
 			}
+		}
+		if (ret.macroEntryPoint == null) {
+			// external function, most likely
+			ret.macroEntryPoint = new Varnode (program.dataSegment, BigInteger.ZERO, 0);
 		}
 		ret.length = program.codeSegment.microIndex - startPC; // a bit hacky, but what else can we do?
 		return ret;
@@ -140,7 +145,7 @@ public class PCodeParser {
 	 * <op mnemonic="COPY" code="1"><seqnum space="ram" offset="0x0" uniq="0x0"/><addr space="unique" offset="0x1c30" size="8"/><addr space="register" offset="0x28" size="8"/></op>
      * <op mnemonic="INT_SUB" code="20"><seqnum space="ram" offset="0x0" uniq="0x1"/><addr space="register" offset="0x20" size="8"/><addr space="register" offset="0x20" size="8"/><addr space="const" offset="0x8" size="8"/></op>
 	 */
-	private Varnode parseBlock(Element blockElt) {
+	private Varnode parseBlock(Element blockElt, boolean firstBlock, PCodeFunction function) {
 		NodeList ops = blockElt.getChildNodes();
 		Varnode ret = null;
 		boolean firstOp = true;
@@ -148,7 +153,7 @@ public class PCodeParser {
 			Node opNode = ops.item(i);
 			if (opNode instanceof Element) {
 				Element opElt = (Element) opNode;
-				PCodeOp op = parseOp(opElt, firstOp);
+				PCodeOp op = parseOp(opElt, firstOp, firstBlock, function);
 				firstOp = false;
 				Varnode vn = program.codeSegment.addOp(op, program.codeSegment, program);
 				if (ret == null) {
@@ -159,7 +164,7 @@ public class PCodeParser {
 		return ret;
 	}
 
-	public PCodeOp parseOp(Element op, boolean firstInBlock) {
+	public PCodeOp parseOp(Element op, boolean firstInBlock, boolean firstInFunction, PCodeFunction f) {
 		String opcode = op.getAttribute("mnemonic");
 		NodeList argNodes = op.getChildNodes();
 		Varnode[] args = new Varnode[3];
@@ -188,7 +193,7 @@ public class PCodeParser {
 			}
 		}
 		
-		PCodeOp ret = new PCodeOp(PCodeOp.PCodeOpCode.valueOf(opcode), args[0],args[1],args[2],offset,uniq,firstInBlock);
+		PCodeOp ret = new PCodeOp(PCodeOp.PCodeOpCode.valueOf(opcode), args[0],args[1],args[2],offset,uniq,firstInBlock, firstInFunction, f);
 
 		return ret;
 	}

@@ -1,5 +1,6 @@
 package com.galois.symbolicSimulator;
 
+import java.math.BigInteger;
 import java.util.ArrayList;
 import java.util.Dictionary;
 import java.util.Enumeration;
@@ -23,6 +24,16 @@ public class PCodeProgram {
 	
 	public PCodeFunction lookupFunction(String funcname) {
 		return functions.get(funcname);
+	}
+	
+	public String lookupFunctionNameFromAddr(BigInteger addr) {
+		for (Enumeration<PCodeFunction> fs = functions.elements(); fs.hasMoreElements() ; ) {
+			PCodeFunction f = fs.nextElement();
+			if (f.macroEntryPoint.offset.equals(addr)) {
+				return f.name;
+			}
+		}
+		return "unknown function";
 	}
 
 	public String toString(PCodeMachineState m) {

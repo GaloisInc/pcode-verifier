@@ -131,8 +131,11 @@ public class Varnode {
 	// copies "size" bytes from the data segment pointed to by src into "this" (register)
 	//  this = [src]
 	void loadIndirect(Varnode src, PCodeSpace sourceSpace) throws Exception {
-		// assert this.isRegister
-		Varnode ramPointer = new Varnode(sourceSpace, src.fetch(), src.size);
+		// assert this.isRegister?
+		// NOPE - this can be a unique pseudo-register (weird)
+		// also interesting, sizes don't necessarily match - so this.size is the
+		// number of bytes we want.
+		Varnode ramPointer = new Varnode(sourceSpace, src.fetch(), this.size);
 		ramPointer.copyTo(this);
 	}
 

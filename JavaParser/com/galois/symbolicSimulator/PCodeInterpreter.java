@@ -44,12 +44,14 @@ public class PCodeInterpreter {
 		PCodeOp op = m.program.codeSegment.fetch(m.microPC++);
 		// TODO: check if this microPC is the start of a Macro Instruction, and if so,
 		//       re-initialize the Unique space.
-		System.out.println(op.toString());
+		System.out.println(op.toString(p));
 		BigInteger lhs;
 		BigInteger rhs;
 		// decode op
 		BigInteger res;
 		long lhsBool, rhsBool, resBool; // for the bit ops
+		// interpret op, modifying machine state, including (perhaps) PC
+
 		switch (op.opcode) {
 			case COPY:
 				op.output.copyBytes(op.input0);
@@ -170,6 +172,8 @@ public class PCodeInterpreter {
 				op.output.storeImmediate(lhs.longValue()); // todo: check if this is right (if output size takes care of this)
 				break;
 			case INT_SEXT:
+				lhs = op.input0.fetch();
+				op.output.storeImmediate(lhs.longValue()); // todo: check if this is right (if output size takes care of this)
 				break;
 			case INT_ADD:
 				lhs = op.input0.fetch();
@@ -325,7 +329,6 @@ public class PCodeInterpreter {
 			default:
 				System.out.println("Unimplemented opcode: " + op.opcode.name());
 		}
-		// interpret op, modifying machine state, including (perhaps) PC
 	}
 	
 	private long maxSizeOfElt(int size) {
