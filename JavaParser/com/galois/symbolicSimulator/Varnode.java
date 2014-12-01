@@ -56,28 +56,36 @@ public class Varnode {
 		}
 		space.contents.put(offset.add(BigInteger.valueOf(i)), val & 0xff);
 	}
+
 	// this varnode is an array of bytes within a space.
 	// fetch returns "size-bytes" from offset interpreted as a word
 	// if big-endian, the zero'th byte is the most-significant byte
 	//    otherwise the zero'th byte is the least-significant
 	// byte0 | byte1 | byte2 ... byteN
-	BigInteger fetch() {
+	BigInteger fetchUnsigned() {
 		if (space.constSpace) {
 			return offset;
 		}
 		BigInteger ret = BigInteger.ZERO;
 		// in terms of fenceposts, the final + is not followed by a shift
 		// so if we do the shifts first then the +, that should do the trick
-		if (arch.bigEndianP) {
-			for (int i = 0; i < size; i++) {
-				ret = ret.shiftLeft(8);
-				Integer v = space.contents.get(offset.add(BigInteger.valueOf(i)));
-				if (v == null) {
-					System.out.println("Warning: fetching uninitialized word");
-				} else {
-					ret = ret.add(BigInteger.valueOf(v.intValue()));
-				}
+		int index = 0;
+		for (int i = 0; i < size; i++) {
+			if (arch.bigEndianP) {
+				index = i;
+			} else {
+				index = size - i - 1;
 			}
+			ret = ret.shiftLeft(8);
+			Integer v = space.contents.get(offset.add(BigInteger.valueOf(index)));
+			if (v == null) {
+				System.out.println("Warning: fetching uninitialized word");
+			} else {
+				ret = ret.add(BigInteger.valueOf(v.intValue()));
+			}
+		}
+		/*
+		if (arch.bigEndianP) {
 		} else {
 			for (int i = size - 1; i >= 0; i--) {
 				ret = ret.shiftLeft(8);
@@ -89,18 +97,55 @@ public class Varnode {
 					ret = ret.add(BigInteger.valueOf(v.intValue()));
 				}
 			}
+		} */
+		return ret;
+	}
+	
+	BigInteger fetchSigned() {
+		if (space.constSpace) {
+			return offset;
+		}
+		BigInteger ret = BigInteger.ZERO;
+		boolean gotSignBit = false;
+		int signBit = 0;
+		int index = 0;
+		for (int i = 0; i < size; i++) {
+			if (arch.bigEndianP) {
+				index = i;
+			} else {
+				index = size - i - 1;
+			}
+			ret = ret.shiftLeft(8);
+			Integer v = space.contents.get(offset.add(BigInteger.valueOf(index)));
+			if (v == null) {
+				System.out.println("Warning: fetching uninitialized word");
+			} else {
+				if (!gotSignBit) {
+					signBit = (v.intValue() >> 7) & 1;
+					gotSignBit = true;
+				}
+				int bitValue = v.intValue();
+				if (signBit > 0) {
+					bitValue = ~bitValue;
+				}
+				ret = ret.or(BigInteger.valueOf(bitValue & 0xff));
+			}
+		}
+		if (signBit > 0) {
+			// two's complement the resulting magnitude
+			ret = ret.negate().subtract(BigInteger.ONE);
 		}
 		return ret;
 	}
 
-	void storeImmediate(BigInteger val) throws Exception {
-		storeImmediate(val.longValueExact());
+	void storeImmediateUnsigned(BigInteger val) throws Exception {
+		storeImmediateUnsigned(val.longValueExact());
 	}
 
 	// stores up to 8 bytes of an immediate value into this varnode
 	// TODO: Java's signed longs will cause a problem if we're dealing with really
 	//       big numbers...
-	void storeImmediate(long val) throws Exception {
+	void storeImmediateUnsigned(long val) throws Exception {
 		PCodeSpace destSpace = this.space;
 		if (space.constSpace) {
 			throw new Exception("storing into constant-space");
@@ -118,12 +163,38 @@ public class Varnode {
 			}
 		}
 	}
-	
+
+	void storeImmediateSigned(long val) throws Exception {
+		PCodeSpace destSpace = this.space;
+		if (space.constSpace) {
+			throw new Exception("storing into constant-space");
+		}
+		boolean negativeP = false;
+		if (val < 0) {
+			negativeP = true;
+			val = (val + 1) * -1;
+		}
+		if (arch.bigEndianP) {
+			// for (long b = offset + size - 1; b >= offset; b--) {
+			for (int i = size - 1; i >= 0; i--) {
+				int byteVal = (int) (negativeP ? (~val & 0xff) : val & 0xff);
+				destSpace.contents.put(offset.add(BigInteger.valueOf(i)), byteVal);
+				val = val >> 8;
+			}
+		} else {
+			for (int i = 0; i < size; i++) {
+				int byteVal = (int) (negativeP ? (~val & 0xff) : val & 0xff);
+				destSpace.contents.put(offset.add(BigInteger.valueOf(i)), byteVal);
+				val = val >> 8;
+			}
+		}
+	}
+
 	// copies "size" bytes from src into data segment ("ram") memory pointed to by "this"
 	//    [this] <- src
 	void storeIndirect(Varnode src, PCodeSpace destSpace) throws Exception {
 		// assert(this.isRegister);
-		BigInteger destOffset = this.fetch();
+		BigInteger destOffset = this.fetchUnsigned();
 		Varnode ramPointer = new Varnode(destSpace, destOffset, src.size);
 		src.copyTo(ramPointer);
 	}
@@ -135,7 +206,7 @@ public class Varnode {
 		// NOPE - this can be a unique pseudo-register (weird)
 		// also interesting, sizes don't necessarily match - so this.size is the
 		// number of bytes we want.
-		Varnode ramPointer = new Varnode(sourceSpace, src.fetch(), this.size);
+		Varnode ramPointer = new Varnode(sourceSpace, src.fetchUnsigned(), this.size);
 		ramPointer.copyTo(this);
 	}
 

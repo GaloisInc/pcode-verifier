@@ -45,6 +45,11 @@ public class PCodeInterpreter {
 		// TODO: check if this microPC is the start of a Macro Instruction, and if so,
 		//       re-initialize the Unique space.
 		System.out.println(op.toString(p));
+
+		doOp(op);
+	}
+	
+	void doOp(PCodeOp op) throws Exception {
 		BigInteger lhs;
 		BigInteger rhs;
 		// decode op
@@ -68,29 +73,29 @@ public class PCodeInterpreter {
 				m.microPC = m.program.codeSegment.microAddrOfMacroInstr(op.output.offset);
 				break;
 			case CBRANCH:
-				lhs = op.input0.fetch();
+				lhs = op.input0.fetchUnsigned();
 				if (!lhs.equals(BigInteger.ZERO)) {
 					m.microPC = m.program.codeSegment.microAddrOfMacroInstr(op.output.offset);
 				}
 				break;
 			case BRANCHIND:
-				lhs = op.output.fetch();
+				lhs = op.output.fetchUnsigned();
 				m.microPC = m.program.codeSegment.microAddrOfMacroInstr(lhs);
 				break;
 			case CALL:
 				m.microPC = m.program.codeSegment.microAddrOfMacroInstr(op.output.offset);
 				break;
 			case CALLIND:
-				lhs = op.output.fetch();
+				lhs = op.output.fetchUnsigned();
 				m.microPC = m.program.codeSegment.microAddrOfMacroInstr(lhs);
 				break;
 			case RETURN:
-				lhs = op.output.fetch();
+				lhs = op.output.fetchUnsigned();
 				m.microPC = m.program.codeSegment.microAddrOfMacroInstr(lhs);
 				break;
 			case PIECE:
-				lhs = op.input0.fetch();
-				rhs = op.input1.fetch();
+				lhs = op.input0.fetchUnsigned();
+				rhs = op.input1.fetchUnsigned();
 				long concat = 0;
 				
 				if (op.input0.size + op.input1.size != op.output.size){
@@ -117,11 +122,11 @@ public class PCodeInterpreter {
 						op.output.storeByte(lhsSize+j, op.input0.fetchByte(j));
 					}
 				}
-				op.output.storeImmediate(concat);
+				op.output.storeImmediateUnsigned(concat);
 				break;
 			case SUBPIECE:
-				lhs = op.input0.fetch();
-				rhs = op.input1.fetch();
+				lhs = op.input0.fetchUnsigned();
+				rhs = op.input1.fetchUnsigned();
 
 				if (rhs.longValueExact() > op.input0.size) {
 					System.out.println("Warning: SUBPIECE operand > size of input");
@@ -135,187 +140,187 @@ public class PCodeInterpreter {
 						op.output.storeByte(i, op.input0.fetchByte(i));
 					}					
 				}
-				op.output.storeImmediate(lhs.longValueExact());
+				op.output.storeImmediateUnsigned(lhs.longValueExact());
 				break;
 			case INT_EQUAL:
-				lhs = op.input0.fetch();
-				rhs = op.input1.fetch();
-				op.output.storeImmediate(lhs.equals(rhs) ? 1 : 0);
+				lhs = op.input0.fetchUnsigned();
+				rhs = op.input1.fetchUnsigned();
+				op.output.storeImmediateUnsigned(lhs.equals(rhs) ? 1 : 0);
 				break;
 			case INT_NOTEQUAL:
-				lhs = op.input0.fetch();
-				rhs = op.input1.fetch();
-				op.output.storeImmediate(!lhs.equals(rhs) ? 1 : 0);
+				lhs = op.input0.fetchUnsigned();
+				rhs = op.input1.fetchUnsigned();
+				op.output.storeImmediateUnsigned(!lhs.equals(rhs) ? 1 : 0);
 				break;
 			case INT_LESS: // todo - work properly with unsigned
-				lhs = op.input0.fetch();
-				rhs = op.input1.fetch();
-				op.output.storeImmediate(lhs.compareTo(rhs) < 0 ? 1 : 0);
+				lhs = op.input0.fetchUnsigned();
+				rhs = op.input1.fetchUnsigned();
+				op.output.storeImmediateUnsigned(lhs.compareTo(rhs) < 0 ? 1 : 0);
 				break;
 			case INT_SLESS:
-				lhs = op.input0.fetch();
-				rhs = op.input1.fetch();
-				op.output.storeImmediate(lhs.compareTo(rhs) < 0 ? 1 : 0);
+				lhs = op.input0.fetchSigned();
+				rhs = op.input1.fetchSigned();
+				op.output.storeImmediateUnsigned(lhs.compareTo(rhs) < 0 ? 1 : 0);
 				break;
 			case INT_LESSEQUAL: // todo - work properly with unsigned
-				lhs = op.input0.fetch();
-				rhs = op.input1.fetch();
-				op.output.storeImmediate(lhs.compareTo(rhs) <= 0 ? 1 : 0);
+				lhs = op.input0.fetchUnsigned();
+				rhs = op.input1.fetchUnsigned();
+				op.output.storeImmediateUnsigned(lhs.compareTo(rhs) <= 0 ? 1 : 0);
 				break;
 			case INT_SLESSEQUAL:
-				lhs = op.input0.fetch();
-				rhs = op.input1.fetch();
-				op.output.storeImmediate(lhs.compareTo(rhs) <= 0 ? 1 : 0);
+				lhs = op.input0.fetchSigned();
+				rhs = op.input1.fetchSigned();
+				op.output.storeImmediateUnsigned(lhs.compareTo(rhs) <= 0 ? 1 : 0);
 				break;
 			case INT_ZEXT:
-				lhs = op.input0.fetch();
-				op.output.storeImmediate(lhs.longValue()); // todo: check if this is right (if output size takes care of this)
+				lhs = op.input0.fetchUnsigned();
+				op.output.storeImmediateUnsigned(lhs.longValue()); // todo: check if this is right (if output size takes care of this)
 				break;
 			case INT_SEXT:
-				lhs = op.input0.fetch();
-				op.output.storeImmediate(lhs.longValue()); // todo: check if this is right (if output size takes care of this)
+				lhs = op.input0.fetchSigned();
+				op.output.storeImmediateUnsigned(lhs.longValue()); // todo: check if this is right (if output size takes care of this)
 				break;
 			case INT_ADD:
-				lhs = op.input0.fetch();
-				rhs = op.input1.fetch();
+				lhs = op.input0.fetchSigned();
+				rhs = op.input1.fetchSigned();
 				res = lhs.add(rhs);
-				op.output.storeImmediate(res.longValue()); // not exact, 'cause wrapping can happen
+				op.output.storeImmediateSigned(res.longValue()); // not exact, 'cause wrapping can happen
 				break;
 			case INT_SUB:
-				lhs = op.input0.fetch();
-				rhs = op.input1.fetch();
+				lhs = op.input0.fetchSigned();
+				rhs = op.input1.fetchSigned();
 				res = lhs.subtract(rhs);
-				op.output.storeImmediate(res.longValueExact());
+				op.output.storeImmediateSigned(res.longValueExact());
 				break;
 			case INT_CARRY:
-				lhs = op.input0.fetch();
-				rhs = op.input1.fetch();
+				lhs = op.input0.fetchUnsigned();
+				rhs = op.input1.fetchUnsigned();
 				rhs = lhs.add(rhs);
 				if (rhs.bitLength() > op.input1.size * 8) {
-					op.output.storeImmediate(1l);
+					op.output.storeImmediateUnsigned(1l);
 				} else {
-					op.output.storeImmediate(0l);
+					op.output.storeImmediateUnsigned(0l);
 				}
 				break;
 			case INT_SCARRY:
-				lhs = op.input0.fetch();
-				rhs = op.input1.fetch();
+				lhs = op.input0.fetchSigned();
+				rhs = op.input1.fetchSigned();
 				rhs = lhs.add(rhs);
 				if (rhs.bitLength() > op.input1.size * 8) {
-					op.output.storeImmediate(1l);
+					op.output.storeImmediateUnsigned(1l);
 				} else {
-					op.output.storeImmediate(0l);
+					op.output.storeImmediateUnsigned(0l);
 				}
 				break;
 			case INT_2COMP:
-				lhs = op.input0.fetch();
-				op.output.storeImmediate(lhs.negate());
+				lhs = op.input0.fetchUnsigned();
+				op.output.storeImmediateUnsigned(lhs.negate().add(BigInteger.ONE));
 				break;
 			case INT_NEGATE:
-				lhs = op.input0.fetch();
+				lhs = op.input0.fetchUnsigned();
 				res = lhs.not();
-				op.output.storeImmediate(res.longValueExact());
+				op.output.storeImmediateUnsigned(res.longValueExact());
 				break;
 			case INT_SBORROW:
-				lhs = op.input0.fetch();
-				rhs = op.input1.fetch();
+				lhs = op.input0.fetchSigned();
+				rhs = op.input1.fetchSigned();
 				BigInteger smaller = lhs.min(rhs);
 				BigInteger bigger = lhs.max(rhs);
 				long maxRange = maxSizeOfElt(op.input0.size);
 				if (bigger.subtract(smaller).longValueExact() > maxRange) {
-					op.output.storeImmediate(1);
+					op.output.storeImmediateUnsigned(1);
 				} else {
-					op.output.storeImmediate(0);
+					op.output.storeImmediateUnsigned(0);
 				}
 				break;
 			case INT_XOR:
-				lhs = op.input0.fetch();
-				rhs = op.input1.fetch();
+				lhs = op.input0.fetchUnsigned();
+				rhs = op.input1.fetchUnsigned();
 				res = lhs.xor(rhs);
-				op.output.storeImmediate(res);
+				op.output.storeImmediateUnsigned(res);
 				break;
 			case INT_AND:
-				lhs = op.input0.fetch();
-				rhs = op.input1.fetch();
+				lhs = op.input0.fetchUnsigned();
+				rhs = op.input1.fetchUnsigned();
 				res = lhs.and(rhs);
-				op.output.storeImmediate(res);
+				op.output.storeImmediateUnsigned(res);
 				break;
 			case INT_OR:
-				lhs = op.input0.fetch();
-				rhs = op.input1.fetch();
+				lhs = op.input0.fetchUnsigned();
+				rhs = op.input1.fetchUnsigned();
 				res = lhs.or(rhs);
-				op.output.storeImmediate(res);
+				op.output.storeImmediateUnsigned(res);
 				break;
 			case INT_LEFT:
-				lhs = op.input0.fetch();
-				rhs = op.input1.fetch();
+				lhs = op.input0.fetchUnsigned();
+				rhs = op.input1.fetchUnsigned();
 				res = lhs.shiftLeft((int)rhs.longValue());
-				op.output.storeImmediate(res);
+				op.output.storeImmediateUnsigned(res);
 				break;
 			case INT_RIGHT: // TODO: fix this for unsigned
-				lhs = op.input0.fetch();
-				rhs = op.input1.fetch();
+				lhs = op.input0.fetchUnsigned();
+				rhs = op.input1.fetchUnsigned();
 				res = lhs.shiftRight((int)rhs.longValue());
-				op.output.storeImmediate(res);
+				op.output.storeImmediateUnsigned(res);
 				break;
 			case INT_SRIGHT:
-				lhs = op.input0.fetch();
-				rhs = op.input1.fetch();
+				lhs = op.input0.fetchSigned();
+				rhs = op.input1.fetchSigned();
 				res = lhs.shiftRight((int)rhs.longValue());
-				op.output.storeImmediate(res);
+				op.output.storeImmediateUnsigned(res);
 				break;
 			case INT_MULT:
-				lhs = op.input0.fetch();
-				rhs = op.input1.fetch();
+				lhs = op.input0.fetchSigned();
+				rhs = op.input1.fetchSigned();
 				res = lhs.multiply(rhs);
-				op.output.storeImmediate(res);
+				op.output.storeImmediateUnsigned(res);
 				break;
 			case INT_DIV:
-				lhs = op.input0.fetch();
-				rhs = op.input1.fetch();
+				lhs = op.input0.fetchSigned();
+				rhs = op.input1.fetchSigned();
 				res = lhs.divide(rhs);
-				op.output.storeImmediate(res);
+				op.output.storeImmediateUnsigned(res);
 				break;
 			case INT_REM:
-				lhs = op.input0.fetch();
-				rhs = op.input1.fetch();
+				lhs = op.input0.fetchUnsigned();
+				rhs = op.input1.fetchUnsigned();
 				res = lhs.mod(rhs);
-				op.output.storeImmediate(res);
+				op.output.storeImmediateUnsigned(res);
 				break;
 			// TODO TODO TODO: implement fetchSigned, and do the SOPS in terms of it.
 			case INT_SDIV:
-				lhs = op.input0.fetch();
-				rhs = op.input1.fetch();
+				lhs = op.input0.fetchSigned();
+				rhs = op.input1.fetchSigned();
 				res = lhs.divide(rhs);
-				op.output.storeImmediate(res);
+				op.output.storeImmediateUnsigned(res);
 				break;
 			case INT_SREM:
-				lhs = op.input0.fetch();
-				rhs = op.input1.fetch();
+				lhs = op.input0.fetchSigned();
+				rhs = op.input1.fetchSigned();
 				res = lhs.mod(rhs);
-				op.output.storeImmediate(res);
+				op.output.storeImmediateUnsigned(res);
 				break;
 			case BOOL_NEGATE:
-				lhs = op.input0.fetch();
-				op.output.storeImmediate(lhs.equals(BigInteger.ZERO) ? 1 : 0);
+				lhs = op.input0.fetchUnsigned();
+				op.output.storeImmediateUnsigned(lhs.equals(BigInteger.ZERO) ? 1 : 0);
 				break;
 			case BOOL_XOR:
-				lhsBool = op.input0.fetch().longValue() & 1l;
-				rhsBool = op.input1.fetch().longValue() & 1l;
+				lhsBool = op.input0.fetchUnsigned().longValue() & 1l;
+				rhsBool = op.input1.fetchUnsigned().longValue() & 1l;
 				resBool = lhsBool ^ rhsBool;
-				op.output.storeImmediate(resBool & 1l);
+				op.output.storeImmediateUnsigned(resBool & 1l);
 				break;
 			case BOOL_AND:
-				lhsBool = op.input0.fetch().longValue() & 1l;
-				rhsBool = op.input1.fetch().longValue() & 1l;
+				lhsBool = op.input0.fetchUnsigned().longValue() & 1l;
+				rhsBool = op.input1.fetchUnsigned().longValue() & 1l;
 				resBool = lhsBool & rhsBool;
-				op.output.storeImmediate(resBool & 1l);
+				op.output.storeImmediateUnsigned(resBool & 1l);
 				break;
 			case BOOL_OR:
-				lhsBool = op.input0.fetch().longValue() & 1l;
-				rhsBool = op.input1.fetch().longValue() & 1l;
+				lhsBool = op.input0.fetchUnsigned().longValue() & 1l;
+				rhsBool = op.input1.fetchUnsigned().longValue() & 1l;
 				resBool = lhsBool | rhsBool;
-				op.output.storeImmediate(resBool & 1l);
+				op.output.storeImmediateUnsigned(resBool & 1l);
 				break;
 /*
 				// floats go here
@@ -339,8 +344,8 @@ public class PCodeInterpreter {
 		if (out.size != in.size) {
 			throw new Exception("mismatched sizes in COPY");
 		}
-		BigInteger val = in.fetch();
-		out.storeImmediate(val);
+		BigInteger val = in.fetchUnsigned();
+		out.storeImmediateUnsigned(val);
 	}
 	
 	public void runInteractive (String funcToRun, Scanner in) {

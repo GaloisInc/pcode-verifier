@@ -68,12 +68,12 @@ public class PCodeMachineState {
 		Varnode rbx = new Varnode(regs, BigInteger.valueOf(0x18l), 8);
 		Varnode rdi = new Varnode(regs, BigInteger.valueOf(0x38l), 8); // input
 		Varnode rax = new Varnode(regs, BigInteger.ZERO, 8); // output
-		rbp.storeImmediate(0x4000l); 
-		rsp.storeImmediate(0x4000l);
-		r14.storeImmediate(0x2l);
-		rbx.storeImmediate(0xf00dl);
-		rdi.storeImmediate(0x7l); // asking for fib(7), which should be 13 (0xd)
-		rax.storeImmediate(0xcafel);
+		rbp.storeImmediateUnsigned(0x4000l); 
+		rsp.storeImmediateUnsigned(0x4000l);
+		r14.storeImmediateUnsigned(0x2l);
+		rbx.storeImmediateUnsigned(0xf00dl);
+		rdi.storeImmediateUnsigned(0x7l); // asking for fib(7), which should be 13 (0xd)
+		rax.storeImmediateUnsigned(0xcafel);
 		// initialize the stack at least a bit:
 		rsp.storeIndirect(rax, program.dataSegment);
 	}
