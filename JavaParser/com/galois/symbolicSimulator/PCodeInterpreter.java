@@ -54,6 +54,7 @@ public class PCodeInterpreter {
 		BigInteger rhs;
 		// decode op
 		BigInteger res;
+		Varnode dest;
 		long lhsBool, rhsBool, resBool; // for the bit ops
 		// interpret op, modifying machine state, including (perhaps) PC
 
@@ -80,6 +81,8 @@ public class PCodeInterpreter {
 				break;
 			case BRANCHIND:
 				lhs = op.output.fetchUnsigned();
+				// oops - not: dest = new Varnode(m.getRAMspace(), lhs, m.program.archSpec.offsetSize);
+				//             lhs = dest.fetchUnsigned();
 				m.microPC = m.program.codeSegment.microAddrOfMacroInstr(lhs);
 				break;
 			case CALL:
@@ -174,11 +177,11 @@ public class PCodeInterpreter {
 				break;
 			case INT_ZEXT:
 				lhs = op.input0.fetchUnsigned();
-				op.output.storeImmediateUnsigned(lhs.longValue()); // todo: check if this is right (if output size takes care of this)
+				op.output.storeImmediateUnsigned(lhs.longValue()); // output size/storeUnsigned does it
 				break;
 			case INT_SEXT:
 				lhs = op.input0.fetchSigned();
-				op.output.storeImmediateUnsigned(lhs.longValue()); // todo: check if this is right (if output size takes care of this)
+				op.output.storeImmediateUnsigned(lhs.longValue()); // output size/storeSigned does it
 				break;
 			case INT_ADD:
 				lhs = op.input0.fetchSigned();
@@ -206,7 +209,7 @@ public class PCodeInterpreter {
 				lhs = op.input0.fetchSigned();
 				rhs = op.input1.fetchSigned();
 				rhs = lhs.add(rhs);
-				if (rhs.bitLength() > op.input1.size * 8) {
+				if (rhs.bitLength() > op.input1.size * 8) { // one bit fewer for signed?
 					op.output.storeImmediateUnsigned(1l);
 				} else {
 					op.output.storeImmediateUnsigned(0l);
@@ -257,7 +260,7 @@ public class PCodeInterpreter {
 				res = lhs.shiftLeft((int)rhs.longValue());
 				op.output.storeImmediateUnsigned(res);
 				break;
-			case INT_RIGHT: // TODO: fix this for unsigned
+			case INT_RIGHT:
 				lhs = op.input0.fetchUnsigned();
 				rhs = op.input1.fetchUnsigned();
 				res = lhs.shiftRight((int)rhs.longValue());
@@ -287,7 +290,6 @@ public class PCodeInterpreter {
 				res = lhs.mod(rhs);
 				op.output.storeImmediateUnsigned(res);
 				break;
-			// TODO TODO TODO: implement fetchSigned, and do the SOPS in terms of it.
 			case INT_SDIV:
 				lhs = op.input0.fetchSigned();
 				rhs = op.input1.fetchSigned();
@@ -422,11 +424,40 @@ public class PCodeInterpreter {
 						args.close();
 					} else if (cmd.contains("print")) {
 						Scanner args = new Scanner(cmd);
-						args.next(); 
+						String command = args.next(); 
 						if (args.hasNext()) { // print one space
 							PCodeSpace s = m.getSpace(args.next());
 							if (s != null) {
-								System.out.println(s.toString());
+								if (args.hasNext()) { // print one element
+									boolean signed = false;
+									if (command.contains("prints")) signed = true;
+
+									int sz = 8;
+									int indirections = 0;
+									String offset = args.next();
+									while(offset.startsWith("[")) {
+										indirections++;
+										offset = offset.substring(1);
+									}
+									if (offset.indexOf("/")>0) {
+										sz = Integer.parseInt(offset.substring(offset.indexOf("/")+1));
+									}
+									if (offset.indexOf("]") > 0) {
+										offset = offset.substring(0, offset.indexOf("]"));
+									}
+									if (offset.startsWith("0x")) {
+										offset = offset.substring(2);
+									}
+									// todo - might use sz instead of wordsize if first space != register
+									Varnode tmp = new Varnode(s,new BigInteger(offset,16),m.program.archSpec.wordSize);
+									while (indirections-- > 0) {
+										BigInteger nv = signed ? tmp.fetchSigned() : tmp.fetchUnsigned();
+										tmp = new Varnode(m.getRAMspace(), nv, sz);
+									}
+									System.out.println(tmp.toString());
+								} else { // print the whole space
+									System.out.println(s.toString());
+								}
 							} else {
 								System.out.println("unable to locate space ");
 							}
@@ -459,7 +490,7 @@ public class PCodeInterpreter {
 							step(m);
 						} while (notAtBreakpoint(m.microPC));
 					} else {
-						System.out.print("this interpreter supports {next|quit|print|list|cont|break<function | addr>}");
+						System.out.println("this interpreter supports {next|quit|print [space [offset][/size]]|list [function]|cont|break[function | addr]}");
 					}
 				}
 			} catch (Exception e) {

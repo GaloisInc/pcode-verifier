@@ -58,7 +58,7 @@ public class TestParser {
 	}
 	
 	@Test
-	public void testSimpleOpcodes() {
+	public void testUnsignedOpcodes() {
 		try {
 			m.initMachineState();
 			PCodeInterpreter interpreter = new PCodeInterpreter(program);
@@ -69,9 +69,13 @@ public class TestParser {
 			Varnode r0 = new Varnode(regs, BigInteger.ZERO, 8);
 			Varnode r1 = new Varnode(regs, BigInteger.valueOf(8), 8);
 			Varnode r2 = new Varnode(regs, BigInteger.valueOf(16), 8);
+			Varnode r3 = new Varnode(regs, BigInteger.ONE, 4);
 			
 			Varnode c0 = new Varnode(c, BigInteger.ZERO, 8);
 			Varnode c1 = new Varnode(c, BigInteger.ONE, 8);
+			Varnode c3 = new Varnode(c, BigInteger.valueOf(0xdeadbeef), 4);
+			Varnode c4 = new Varnode(c, BigInteger.valueOf(0x10101010), 4);
+			Varnode c5 = new Varnode(c, BigInteger.valueOf(0x5f5f5f5f), 4);
 			
 			interpreter.doOp(new PCodeOp(PCodeOpCode.COPY, r0, c1, null)); // r0 should have a 1
 			assertEquals("COPY test", BigInteger.ONE, r0.fetchUnsigned());
@@ -87,6 +91,20 @@ public class TestParser {
 				assertEquals("for loop ADD test", BigInteger.valueOf(i), r0.fetchUnsigned());
 				interpreter.doOp(new PCodeOp(PCodeOpCode.INT_ADD, r0, r0, c1)); // r0 <- r0 + 1
 			}
+			
+			// the expected answers below are from Cryptol.
+			interpreter.doOp(new PCodeOp(PCodeOpCode.INT_XOR, r3, c3, c4)); // r3 <- deadbeef & 10101010
+			assertEquals("INT_XOR test", new BigInteger("cebdaeff", 16), r3.fetchUnsigned());
+
+			interpreter.doOp(new PCodeOp(PCodeOpCode.INT_AND, r3, c3, c5)); // r3 <- deadbeef & 5f5f5f5f
+			assertEquals("INT_AND test", new BigInteger("5e0d1e4f", 16), r3.fetchUnsigned());
+
+			interpreter.doOp(new PCodeOp(PCodeOpCode.INT_NEGATE, r3, c3, null)); // r3 <- ~deadbeef 
+			assertEquals("INT_NEGATE test", new BigInteger("21524110", 16), r3.fetchUnsigned());
+
+			// TODO: other unsigned opcodes, incl INT_CARRY, INT_LESSEQUAL, INT_LESS
+			// INT_NOTEQUAL, INT_EQUAL, PIECE, SUBPIECE, INT_XOR, INT_AND, INT_OR, INT_LEFT, INT_RIGHT
+			// INT_MULT, INT_DIV, INT_REM, BOOL_NEGATE, 
 		} catch (Exception e) {
 			e.printStackTrace();
 			fail("Error in Varnode test: ");
@@ -106,6 +124,7 @@ public class TestParser {
 			Varnode r0 = new Varnode(regs, BigInteger.ZERO, 2);
 			Varnode r1 = new Varnode(regs, BigInteger.valueOf(8), 2);
 			Varnode r2 = new Varnode(regs, BigInteger.valueOf(16), 2);
+			Varnode r3 = new Varnode(regs, BigInteger.ZERO, 8);
 			
 			Varnode c0 = new Varnode(c, BigInteger.ZERO, 2);
 			Varnode c1 = new Varnode(c, BigInteger.ONE, 2);
@@ -119,12 +138,30 @@ public class TestParser {
 				assertEquals("for loop SUB test", BigInteger.valueOf(-1 * i), r0.fetchSigned());
 				interpreter.doOp(new PCodeOp(PCodeOpCode.INT_SUB, r0, r0, c1)); // r0 <- r0-1
 			}
-				
+			// we now use r0's -512 value in the next few tests:
+			interpreter.doOp(new PCodeOp(PCodeOpCode.INT_SEXT, r3, r0, null)); // r3 should have -512:[64]
+			assertEquals("INT_SEXT test", BigInteger.valueOf(-512), r3.fetchSigned());
+			
+			interpreter.doOp(new PCodeOp(PCodeOpCode.INT_ZEXT, r3, r0, null)); // r3 should have 0xfe00:[64]
+			assertEquals("INT_ZEXT test", BigInteger.valueOf(0xfe00), r3.fetchUnsigned());
+			
+			// TODO: INT_SLESS, INT_SLESSEQUAL, INT_SCARRY, INT_2COMP, INT_NEGATE, INT_SBORROW
+			// INT_SRIGHT, 	INT_SDIV, INT_SREM, ...
 		} catch (Exception e) {
 			e.printStackTrace();
 			fail("Error in Varnode test: ");
 		}
 
 	}
-
+	
+	@Test
+	public void testControlFlow() {
+		// TODO: BRANCH, CBRANCH, BRANCHIND, CALL, RETURN, CALLIND
+	}
+	
+	@Test
+	public void testMemOps() {
+		// COPY, LOAD, STORE, PTRADD, INDIRECT
+	}
+	
 }

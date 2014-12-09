@@ -84,20 +84,6 @@ public class Varnode {
 				ret = ret.add(BigInteger.valueOf(v.intValue()));
 			}
 		}
-		/*
-		if (arch.bigEndianP) {
-		} else {
-			for (int i = size - 1; i >= 0; i--) {
-				ret = ret.shiftLeft(8);
-				Integer v = space.contents.get(offset.add(BigInteger.valueOf(i)));
-				if (v == null) {
-					System.out.println("Warning: fetching uninitialized word @0x" +
-							offset.add(BigInteger.valueOf(i)).toString(16));
-				} else {
-					ret = ret.add(BigInteger.valueOf(v.intValue()));
-				}
-			}
-		} */
 		return ret;
 	}
 	

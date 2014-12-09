@@ -9,6 +9,7 @@ import java.util.Iterator;
 // Machine state needed for interpreting PCode programs
 public class PCodeMachineState {
 	int microPC; // index into microOps
+	
 	PCodeProgram program;
 	Dictionary<String,PCodeSpace> spaces;
 		

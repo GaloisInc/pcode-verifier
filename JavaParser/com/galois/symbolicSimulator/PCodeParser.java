@@ -103,7 +103,7 @@ public class PCodeParser {
 				program.archSpec.bigEndianP = isBig.toLowerCase().startsWith("true");
 			} else if (tag.startsWith("wordSize")) {
 				String wordSize = elt.getAttribute("bits");
-				program.archSpec.wordSize = Integer.parseInt(wordSize);
+				program.archSpec.wordSize = Integer.parseInt(wordSize)/8;
 			} 
 		}
 		return program;
