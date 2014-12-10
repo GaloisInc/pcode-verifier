@@ -17,8 +17,8 @@ public class PCodeProgram {
 	public PCodeProgram() {
 		functions = new Hashtable<String,PCodeFunction>();
 		archSpec = new PCodeArchSpec();
-		codeSegment = new PCodeCodeSpace(archSpec);
 		dataSegment = new PCodeSpace("ram", archSpec);
+		codeSegment = new PCodeCodeSpace(archSpec,dataSegment);
 		varnodes = new ArrayList<Varnode>();
 	}
 	

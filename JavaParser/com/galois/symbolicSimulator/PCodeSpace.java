@@ -96,10 +96,12 @@ class PCodeCodeSpace extends PCodeSpace {
 	List<PCodeOp> microOps;
 	// "contents" indexes into the above list for the beginning of each macroOp
 	int microIndex = 0;
+	PCodeSpace ram;
 	
-	public PCodeCodeSpace(PCodeArchSpec a) {
+	public PCodeCodeSpace(PCodeArchSpec a, PCodeSpace ram) {
 		super("data_segment", a);
 		microOps = new ArrayList<>(8196);
+		this.ram = ram;
 	}
 	
 	public PCodeOp fetch (int pc) {
@@ -118,8 +120,13 @@ class PCodeCodeSpace extends PCodeSpace {
 		}
 		if (contents.containsKey(macroOffset))
 			return contents.get(macroOffset);
-		else 
+		else {
+			if (ram.contents.get(macroOffset) != null) {
+				throw new Exception("Fetching non-decoded instruction @0x" + macroOffset.toString(16));
+			}
 			throw new Exception ("Fetch outside code space @0x" + macroOffset.toString(16));
+
+		}
 	}
 	
 	public Varnode addOp(PCodeOp op, PCodeSpace space, PCodeProgram prog) {

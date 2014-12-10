@@ -81,8 +81,6 @@ public class PCodeInterpreter {
 				break;
 			case BRANCHIND:
 				lhs = op.output.fetchUnsigned();
-				// oops - not: dest = new Varnode(m.getRAMspace(), lhs, m.program.archSpec.offsetSize);
-				//             lhs = dest.fetchUnsigned();
 				m.microPC = m.program.codeSegment.microAddrOfMacroInstr(lhs);
 				break;
 			case CALL:
@@ -143,7 +141,7 @@ public class PCodeInterpreter {
 						op.output.storeByte(i, op.input0.fetchByte(i));
 					}					
 				}
-				op.output.storeImmediateUnsigned(lhs.longValueExact());
+				// not: op.output.storeImmediateUnsigned(lhs.longValueExact());
 				break;
 			case INT_EQUAL:
 				lhs = op.input0.fetchUnsigned();
@@ -495,7 +493,7 @@ public class PCodeInterpreter {
 				}
 			} catch (Exception e) {
 				System.out.println("error: " + e.getMessage());
-				e.printStackTrace();
+				// e.printStackTrace();
 			}
 			System.out.print("> ");
 		}
