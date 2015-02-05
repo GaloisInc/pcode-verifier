@@ -69,7 +69,7 @@ public class PCodeSpace {
 	public Integer getByte(BigInteger base, int offset) throws Exception {
 		if (constSpace) {
 			long retVal = 0;
-			long baseVal = base.longValueExact();
+			long baseVal = base.longValue();
 			// base is our number, offset is the "ith" byte we're after
 			if (arch.bigEndianP) {
 				retVal = 0xffl & (baseVal >> (7-offset) * 8);

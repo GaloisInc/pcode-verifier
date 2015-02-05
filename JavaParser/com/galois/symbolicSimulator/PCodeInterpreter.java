@@ -54,7 +54,6 @@ public class PCodeInterpreter {
 		BigInteger rhs;
 		// decode op
 		BigInteger res;
-		Varnode dest;
 		long lhsBool, rhsBool, resBool; // for the bit ops
 		// interpret op, modifying machine state, including (perhaps) PC
 
@@ -129,14 +128,14 @@ public class PCodeInterpreter {
 				lhs = op.input0.fetchUnsigned();
 				rhs = op.input1.fetchUnsigned();
 
-				if (rhs.longValueExact() > op.input0.size) {
+				if (rhs.longValue() > op.input0.size) {
 					System.out.println("Warning: SUBPIECE operand > size of input");
 					break;
 				}
 				// "throw away rhs-bytes of input"
 				for (int i = 0; i < op.input0.size; i++) {
 					if (p.archSpec.bigEndianP) {
-						op.output.storeByte(i, op.input0.fetchByte((int) (i + rhs.longValueExact())));
+						op.output.storeByte(i, op.input0.fetchByte((int) (i + rhs.longValue())));
 					} else {
 						op.output.storeByte(i, op.input0.fetchByte(i));
 					}					
@@ -191,7 +190,7 @@ public class PCodeInterpreter {
 				lhs = op.input0.fetchSigned();
 				rhs = op.input1.fetchSigned();
 				res = lhs.subtract(rhs);
-				op.output.storeImmediateSigned(res.longValueExact());
+				op.output.storeImmediateSigned(res.longValue());
 				break;
 			case INT_CARRY:
 				lhs = op.input0.fetchUnsigned();
@@ -220,7 +219,7 @@ public class PCodeInterpreter {
 			case INT_NEGATE:
 				lhs = op.input0.fetchUnsigned();
 				res = lhs.not();
-				op.output.storeImmediateUnsigned(res.longValueExact());
+				op.output.storeImmediateUnsigned(res.longValue());
 				break;
 			case INT_SBORROW:
 				lhs = op.input0.fetchSigned();
@@ -228,7 +227,7 @@ public class PCodeInterpreter {
 				BigInteger smaller = lhs.min(rhs);
 				BigInteger bigger = lhs.max(rhs);
 				long maxRange = maxSizeOfElt(op.input0.size);
-				if (bigger.subtract(smaller).longValueExact() > maxRange) {
+				if (bigger.subtract(smaller).longValue() > maxRange) {
 					op.output.storeImmediateUnsigned(1);
 				} else {
 					op.output.storeImmediateUnsigned(0);
@@ -461,6 +460,59 @@ public class PCodeInterpreter {
 							}
 						} else { // print all spaces
 							System.out.println(p.toString());
+						}
+						args.close();
+					} else if (cmd.contains("set")) {
+						Scanner args = new Scanner(cmd);
+						String command = args.next(); 
+						if (args.hasNext()) { // print one space
+							PCodeSpace s = m.getSpace(args.next());
+							if (s != null) {
+								if (args.hasNext()) { // print one element
+									boolean signed = false;
+									if (command.contains("sets")) signed = true;
+
+									int sz = 8;
+									int indirections = 0;
+									String offset = args.next();
+									while(offset.startsWith("[")) {
+										indirections++;
+										offset = offset.substring(1);
+									}
+									if (offset.indexOf("/")>0) {
+										sz = Integer.parseInt(offset.substring(offset.indexOf("/")+1));
+									}
+									if (offset.indexOf("]") > 0) {
+										offset = offset.substring(0, offset.indexOf("]"));
+									}
+									if (offset.startsWith("0x")) {
+										offset = offset.substring(2);
+									}
+									String valStr = args.next();
+									if (valStr.startsWith("0x")) {
+										valStr = valStr.substring(2);
+									}
+									BigInteger val = new BigInteger(valStr,16);
+									// todo - might use sz instead of wordsize if first space != register
+									Varnode tmp = new Varnode(s,new BigInteger(offset,16),m.program.archSpec.wordSize);
+									while (indirections-- > 0) {
+										BigInteger nv = signed ? tmp.fetchSigned() : tmp.fetchUnsigned();
+										tmp = new Varnode(m.getRAMspace(), nv, sz);
+									}
+									if (signed) {
+										tmp.storeImmediateUnsigned(val);
+									} else {
+										tmp.storeImmediateSigned(val.longValue());
+									}
+									// System.out.println(tmp.toString());
+								} else { // print the whole space
+									System.out.println("usage: set <space> <offset> <value> ");
+								}
+							} else {
+								System.out.println("usage: set <space> <offset> <value> ");
+							}
+						} else { // print all spaces
+							System.out.println("usage: set <space> <offset> <value> ");
 						}
 						args.close();
 					} else if (cmd.contains("break")) {

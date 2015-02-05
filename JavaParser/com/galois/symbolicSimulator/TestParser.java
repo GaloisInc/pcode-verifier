@@ -1,10 +1,10 @@
 package com.galois.symbolicSimulator;
 
-import static org.junit.Assert.*;
-
 import java.math.BigInteger;
 
+
 import org.junit.*;
+import static org.junit.Assert.*;
 
 import com.galois.symbolicSimulator.PCodeOp.PCodeOpCode;
 
@@ -43,7 +43,7 @@ public class TestParser {
 			r0.storeImmediateUnsigned(0x123);
 			r1.storeImmediateUnsigned(0x0f00dl);
  
-			assertEquals("Storing food failed", (r1.fetchUnsigned().longValueExact() & 0xffff), 0xf00dl);
+			assertEquals("Storing food failed", (r1.fetchUnsigned().longValue() & 0xffff), 0xf00dl);
 			assertEquals("Const 1 failed", BigInteger.ONE, c1.fetchUnsigned());
 			assertEquals("Const f00d failed", BigInteger.valueOf(0xf00dl), cFood.fetchUnsigned());
 			assertEquals("Const byte 1 failed", 1, c1.fetchByte(0));

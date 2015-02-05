@@ -11,6 +11,8 @@ public class Varnode {
 	BigInteger offset;
 	int size;
 	
+	static BigInteger minLongValue = new BigInteger(Long.toString(Long.MIN_VALUE));
+	static BigInteger maxLongValue = new BigInteger(Long.toString(Long.MAX_VALUE));
 
 	public Varnode (PCodeProgram p) {
 		arch = null;
@@ -58,10 +60,6 @@ public class Varnode {
 	}
 
 	// this varnode is an array of bytes within a space.
-	// fetch returns "size-bytes" from offset interpreted as a word
-	// if big-endian, the zero'th byte is the most-significant byte
-	//    otherwise the zero'th byte is the least-significant
-	// byte0 | byte1 | byte2 ... byteN
 	BigInteger fetchUnsigned() {
 		if (space.constSpace) {
 			return offset;
@@ -125,7 +123,11 @@ public class Varnode {
 	}
 
 	void storeImmediateUnsigned(BigInteger val) throws Exception {
-		storeImmediateUnsigned(val.longValueExact());
+		if (val.compareTo(maxLongValue) < 0 && val.compareTo(minLongValue) > 0) {
+			storeImmediateUnsigned(val.longValue());
+		} else {
+			throw new ArithmeticException("storeImmediateUnsigned storing value outside of Long range");
+		}
 	}
 
 	// stores up to 8 bytes of an immediate value into this varnode
