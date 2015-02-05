@@ -540,7 +540,7 @@ public class PCodeInterpreter {
 							step(m);
 						} while (notAtBreakpoint(m.microPC));
 					} else {
-						System.out.println("this interpreter supports {next|quit|print [space [offset][/size]]|list [function]|cont|break[function | addr]}");
+						System.out.println("this interpreter supports {next|quit|print [space [offset][/size]]|list [function]|cont|break[function | addr]|set space offset value}");
 					}
 				}
 			} catch (Exception e) {
