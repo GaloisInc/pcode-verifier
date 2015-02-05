@@ -429,15 +429,18 @@ public class PCodeInterpreter {
 									boolean signed = false;
 									if (command.contains("prints")) signed = true;
 
-									int sz = 8;
+									int valsz = s.wordsize;
 									int indirections = 0;
 									String offset = args.next();
+									
+									int colonIndex = offset.indexOf(':');
+									if (colonIndex > 0) {
+										valsz = Integer.parseInt(offset.substring(colonIndex + 1));
+										offset = offset.substring(0,colonIndex);
+									}
 									while(offset.startsWith("[")) {
 										indirections++;
 										offset = offset.substring(1);
-									}
-									if (offset.indexOf("/")>0) {
-										sz = Integer.parseInt(offset.substring(offset.indexOf("/")+1));
 									}
 									if (offset.indexOf("]") > 0) {
 										offset = offset.substring(0, offset.indexOf("]"));
@@ -445,10 +448,13 @@ public class PCodeInterpreter {
 									if (offset.startsWith("0x")) {
 										offset = offset.substring(2);
 									}
-									// todo - might use sz instead of wordsize if first space != register
-									Varnode tmp = new Varnode(s,new BigInteger(offset,16),m.program.archSpec.wordSize);
+									Varnode tmp = null;
+
+									int sz = indirections == 0 ? valsz : m.program.archSpec.wordSize;
+									tmp = new Varnode(s,new BigInteger(offset,16),sz);
 									while (indirections-- > 0) {
 										BigInteger nv = signed ? tmp.fetchSigned() : tmp.fetchUnsigned();
+										sz = indirections == 0 ? valsz : m.program.archSpec.wordSize;
 										tmp = new Varnode(m.getRAMspace(), nv, sz);
 									}
 									System.out.println(tmp.toString());
@@ -465,26 +471,16 @@ public class PCodeInterpreter {
 					} else if (cmd.contains("set")) {
 						Scanner args = new Scanner(cmd);
 						String command = args.next(); 
-						if (args.hasNext()) { // print one space
+						if (args.hasNext()) { // set requires a space
 							PCodeSpace s = m.getSpace(args.next());
 							if (s != null) {
-								if (args.hasNext()) { // print one element
+								if (args.hasNext()) { // set requires an offset and a value [optional :size]
 									boolean signed = false;
 									if (command.contains("sets")) signed = true;
 
-									int sz = 8;
-									int indirections = 0;
+									int valsz = s.wordsize;
 									String offset = args.next();
-									while(offset.startsWith("[")) {
-										indirections++;
-										offset = offset.substring(1);
-									}
-									if (offset.indexOf("/")>0) {
-										sz = Integer.parseInt(offset.substring(offset.indexOf("/")+1));
-									}
-									if (offset.indexOf("]") > 0) {
-										offset = offset.substring(0, offset.indexOf("]"));
-									}
+									
 									if (offset.startsWith("0x")) {
 										offset = offset.substring(2);
 									}
@@ -492,13 +488,14 @@ public class PCodeInterpreter {
 									if (valStr.startsWith("0x")) {
 										valStr = valStr.substring(2);
 									}
-									BigInteger val = new BigInteger(valStr,16);
-									// todo - might use sz instead of wordsize if first space != register
-									Varnode tmp = new Varnode(s,new BigInteger(offset,16),m.program.archSpec.wordSize);
-									while (indirections-- > 0) {
-										BigInteger nv = signed ? tmp.fetchSigned() : tmp.fetchUnsigned();
-										tmp = new Varnode(m.getRAMspace(), nv, sz);
+									int colonIndex = valStr.indexOf(":");
+									if (colonIndex > 0) {
+										valsz = Integer.parseInt(valStr.substring(colonIndex + 1));
+										valStr = valStr.substring(0,colonIndex);
 									}
+									BigInteger val = new BigInteger(valStr,16);
+
+									Varnode tmp = new Varnode(s,new BigInteger(offset,16),valsz);
 									if (signed) {
 										tmp.storeImmediateUnsigned(val);
 									} else {
@@ -506,13 +503,13 @@ public class PCodeInterpreter {
 									}
 									// System.out.println(tmp.toString());
 								} else { // print the whole space
-									System.out.println("usage: set <space> <offset> <value> ");
+									System.out.println("usage: set <space> <offset> <value>[:<size>] ");
 								}
 							} else {
-								System.out.println("usage: set <space> <offset> <value> ");
+								System.out.println("usage: set <space> <offset> <value>[:<size>] ");
 							}
 						} else { // print all spaces
-							System.out.println("usage: set <space> <offset> <value> ");
+							System.out.println("usage: set <space> <offset> <value>[:<size>] ");
 						}
 						args.close();
 					} else if (cmd.contains("break")) {
@@ -540,7 +537,11 @@ public class PCodeInterpreter {
 							step(m);
 						} while (notAtBreakpoint(m.microPC));
 					} else {
+<<<<<<< HEAD
+						System.out.println("this interpreter supports {next|quit|print [space [offset][:size]]|list [function]|cont|break[function | addr]|set space offset value[:size]}");
+=======
 						System.out.println("this interpreter supports {next|quit|print [space [offset][/size]]|list [function]|cont|break[function | addr]|set space offset value}");
+>>>>>>> a8f2824075d66882a70ee6fafb6fbcfa896ba0eb
 					}
 				}
 			} catch (Exception e) {
