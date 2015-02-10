@@ -39,15 +39,35 @@ public class TestParser {
 			Varnode r1 = new Varnode(regs, BigInteger.valueOf(0x8), 8);
 			Varnode c1 = new Varnode(c, BigInteger.ONE, 8);
 			Varnode cFood = new Varnode(c, BigInteger.valueOf(0xf00dl), 8);
+			Varnode oneByte = new Varnode(regs, BigInteger.valueOf(0x0), 1);
+			Varnode twoBytes = new Varnode(regs, BigInteger.valueOf(0x1), 2);
+			Varnode threeBytes = new Varnode(regs, BigInteger.valueOf(0x3), 3);
+			Varnode fourBytes = new Varnode(regs, BigInteger.valueOf(0x10), 4);
 			
 			r0.storeImmediateUnsigned(0x123);
 			r1.storeImmediateUnsigned(0x0f00dl);
- 
+
+			long oneByteValue = 0xef;
+			long twoByteValue = 0xbeef;
+			long threeByteValue = 0xc0beef;
+			long fourByteValue = 0xcafef00dl;
+			
+			oneByte.storeImmediateSigned(oneByteValue);
+			twoBytes.storeImmediateSigned(twoByteValue);
+			threeBytes.storeImmediateSigned(threeByteValue);
+			fourBytes.storeImmediateSigned(fourByteValue);
+			
 			assertEquals("Storing food failed", (r1.fetchUnsigned().longValue() & 0xffff), 0xf00dl);
 			assertEquals("Const 1 failed", BigInteger.ONE, c1.fetchUnsigned());
 			assertEquals("Const f00d failed", BigInteger.valueOf(0xf00dl), cFood.fetchUnsigned());
 			assertEquals("Const byte 1 failed", 1, c1.fetchByte(0));
-			
+
+			// testing different varnode sizes:
+			assertTrue("one byte store",   oneByte.fetchUnsigned().equals(BigInteger.valueOf(oneByteValue)));
+			assertTrue("two byte store",   twoBytes.fetchUnsigned().equals(BigInteger.valueOf(twoByteValue)));
+			assertTrue("three byte store", threeBytes.fetchUnsigned().equals(BigInteger.valueOf(threeByteValue)));
+			assertTrue("four byte store",  fourBytes.fetchUnsigned().equals(BigInteger.valueOf(fourByteValue)));
+
 			// todo: test PIECE / SUBPIECE
 			
 			// todo: test endianness interpretation 

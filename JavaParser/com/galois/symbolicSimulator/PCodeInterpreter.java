@@ -537,11 +537,7 @@ public class PCodeInterpreter {
 							step(m);
 						} while (notAtBreakpoint(m.microPC));
 					} else {
-<<<<<<< HEAD
 						System.out.println("this interpreter supports {next|quit|print [space [offset][:size]]|list [function]|cont|break[function | addr]|set space offset value[:size]}");
-=======
-						System.out.println("this interpreter supports {next|quit|print [space [offset][/size]]|list [function]|cont|break[function | addr]|set space offset value}");
->>>>>>> a8f2824075d66882a70ee6fafb6fbcfa896ba0eb
 					}
 				}
 			} catch (Exception e) {
