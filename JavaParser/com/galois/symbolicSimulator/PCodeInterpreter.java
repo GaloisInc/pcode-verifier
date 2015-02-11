@@ -1,5 +1,6 @@
 package com.galois.symbolicSimulator;
 
+import java.io.PrintStream;
 import java.math.BigInteger;
 import java.util.Enumeration;
 import java.util.HashSet;
@@ -11,6 +12,7 @@ import java.util.Set;
 public class PCodeInterpreter {
 	PCodeMachineState m;
 	PCodeProgram p;
+	PrintStream out = System.out;
 	
 	Set<Integer> breakpoints;
 
@@ -18,6 +20,14 @@ public class PCodeInterpreter {
 		p = program;
 		m = new PCodeMachineState(p);
 		breakpoints = new HashSet<Integer>();
+		out = System.out;
+	}
+	
+	public PCodeInterpreter(PCodeProgram program, PrintStream o) {
+		p = program;
+		m = new PCodeMachineState(p);
+		breakpoints = new HashSet<Integer>();
+		out = o;
 	}
 	
 	// PCode is a bit weird on LOAD and STORE - 
@@ -44,7 +54,7 @@ public class PCodeInterpreter {
 		PCodeOp op = m.program.codeSegment.fetch(m.microPC++);
 		// TODO: check if this microPC is the start of a Macro Instruction, and if so,
 		//       re-initialize the Unique space.
-		System.out.println(op.toString(p));
+		out.println(op.toString(p));
 
 		doOp(op);
 	}
@@ -99,7 +109,7 @@ public class PCodeInterpreter {
 				long concat = 0;
 				
 				if (op.input0.size + op.input1.size != op.output.size){
-					System.out.println("Warning: PIECE operands != size of output");
+					out.println("Warning: PIECE operands != size of output");
 					break;
 				}
 				// "lhs makes up the most significant part of the output"
@@ -129,7 +139,7 @@ public class PCodeInterpreter {
 				rhs = op.input1.fetchUnsigned();
 
 				if (rhs.longValue() > op.input0.size) {
-					System.out.println("Warning: SUBPIECE operand > size of input");
+					out.println("Warning: SUBPIECE operand > size of input");
 					break;
 				}
 				// "throw away rhs-bytes of input"
@@ -331,7 +341,7 @@ public class PCodeInterpreter {
 				break;
 */
 			default:
-				System.out.println("Unimplemented opcode: " + op.opcode.name());
+				out.println("Unimplemented opcode: " + op.opcode.name());
 		}
 	}
 	
@@ -347,35 +357,36 @@ public class PCodeInterpreter {
 		out.storeImmediateUnsigned(val);
 	}
 	
-	public void runInteractive (String funcToRun, Scanner in) {
+	// return value is whether our caller should exit (true == exit, false == keep going)
+	public boolean runInteractive (String funcToRun, Scanner in) {
 		boolean done = false;
 		try {
 			// set up registers, stack, etc.
 			m.initMachineState();
 			m.initMachineStateForFunctionCall(); 
 		} catch (Exception e1) {
-			System.out.println("Unable to initialze machine state");
+			out.println("Unable to initialze machine state");
 			e1.printStackTrace();
-			System.exit(-1);
+			return false;
 		}
 
 		// set up PC
 		
 		PCodeFunction f = p.lookupFunction(funcToRun);
 		if (f == null) {
-			System.out.println("Unable to locate function " + funcToRun);
-			return;
+			out.println("Unable to locate function " + funcToRun);
+			return false;
 		}
-		System.out.println("Starting " + funcToRun);
+		out.println("Starting " + funcToRun);
 		
 		try {
 			m.microPC = m.program.codeSegment.microAddrOfVarnode(f.macroEntryPoint);
 		} catch (Exception e) {
-			System.out.println("Unable to find " + funcToRun);
-			return;
+			out.println("Unable to find " + funcToRun);
+			return false;
 		}
 		
-		System.out.print("> ");
+		out.print("> ");
 		while (!done) {
 			try {
 				String cmd = null;
@@ -384,8 +395,10 @@ public class PCodeInterpreter {
 				} else {
 					cmd = in.nextLine();
 					if (cmd.contains("quit")) {
-						System.out.println("Bye!");
-						System.exit(0);
+						out.println("Bye!");
+						return true;
+					} else if (cmd.contains("restart")) {
+						return false;
 					} else if (cmd.contains("next") || cmd.length() == 0) {
 						step(m);
 					} else if (cmd.contains("list")) {
@@ -394,28 +407,28 @@ public class PCodeInterpreter {
 						if (args.hasNext()) { // print one space
 							String fn = args.next();
 							if (fn.equals("all")) {
-								System.out.println("Program state:");
-								System.out.println(p.toString(m));
-								System.out.println("Machine state:");
-								System.out.println(m.toString());
+								out.println("Program state:");
+								out.println(p.toString(m));
+								out.println("Machine state:");
+								out.println(m.toString());
 							} else if (fn.equals("spaces")){
-								System.out.println("Spaces:");
+								out.println("Spaces:");
 								for (Enumeration<String> e = m.spaces.keys(); e.hasMoreElements(); ) {
-									System.out.print(e.nextElement() + " ");
+									out.print(e.nextElement() + " ");
 								}
-								System.out.print("\n");
+								out.print("\n");
 							} else {
 								PCodeFunction pfn = p.functions.get(fn);
 								if (pfn != null)
-									System.out.println(pfn.toString(m));
+									out.println(pfn.toString(m));
 								else {
-									System.out.println("Unable to locate function " + fn);
+									out.println("Unable to locate function " + fn);
 								}
 							}
 						} else {
 							for (int i = 0; i < 10; i++) {
 								PCodeOp o = m.program.codeSegment.fetch(m.microPC+i);
-								System.out.println(o.toString());
+								out.println(o.toString());
 							}
 						}
 						args.close();
@@ -457,15 +470,15 @@ public class PCodeInterpreter {
 										sz = indirections == 0 ? valsz : m.program.archSpec.wordSize;
 										tmp = new Varnode(m.getRAMspace(), nv, sz);
 									}
-									System.out.println(tmp.toString());
+									out.println(tmp.toString());
 								} else { // print the whole space
-									System.out.println(s.toString());
+									out.println(s.toString());
 								}
 							} else {
-								System.out.println("unable to locate space ");
+								out.println("unable to locate space ");
 							}
 						} else { // print all spaces
-							System.out.println(p.toString());
+							out.println(p.toString());
 						}
 						args.close();
 					} else if (cmd.contains("set")) {
@@ -501,15 +514,15 @@ public class PCodeInterpreter {
 									} else {
 										tmp.storeImmediateSigned(val.longValue());
 									}
-									// System.out.println(tmp.toString());
+									// out.println(tmp.toString());
 								} else { // print the whole space
-									System.out.println("usage: set <space> <offset> <value>[:<size>] ");
+									out.println("usage: set <space> <offset> <value>[:<size>] ");
 								}
 							} else {
-								System.out.println("usage: set <space> <offset> <value>[:<size>] ");
+								out.println("usage: set <space> <offset> <value>[:<size>] ");
 							}
 						} else { // print all spaces
-							System.out.println("usage: set <space> <offset> <value>[:<size>] ");
+							out.println("usage: set <space> <offset> <value>[:<size>] ");
 						}
 						args.close();
 					} else if (cmd.contains("break")) {
@@ -532,20 +545,21 @@ public class PCodeInterpreter {
 						}
 						args.close();
 					} else if (cmd.contains("cont")) {
-						System.out.println("Execution trace:");
+						out.println("Execution trace:");
 						do {
 							step(m);
 						} while (notAtBreakpoint(m.microPC));
 					} else {
-						System.out.println("this interpreter supports {next|quit|print [space [offset][:size]]|list [function]|cont|break[function | addr]|set space offset value[:size]}");
+						out.println("this interpreter supports {next|quit|print [space [offset][:size]]|list [function]|cont|break[function | addr]|set space offset value[:size]}");
 					}
 				}
 			} catch (Exception e) {
-				System.out.println("error: " + e.getMessage());
+				out.println("error: " + e.getMessage());
 				// e.printStackTrace();
 			}
-			System.out.print("> ");
+			out.print("> ");
 		}
+		return true;
 	}
 
 	private boolean notAtBreakpoint(int microPC) {

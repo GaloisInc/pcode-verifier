@@ -1,5 +1,6 @@
 package com.galois.symbolicSimulator;
 
+import java.io.PrintStream;
 import java.math.BigInteger;
 import java.util.ArrayList;
 import java.util.Enumeration;
@@ -36,8 +37,9 @@ public class PCodeParser {
 	NodeList topNodes;
 
 	PCodeProgram program;
+	PrintStream out;
 	
-	public PCodeParser(String file) {
+	public PCodeParser(String file, PrintStream o) {
 		try {
 			dbf = DocumentBuilderFactory.newInstance();
 			db = dbf.newDocumentBuilder();
@@ -45,23 +47,24 @@ public class PCodeParser {
 			doc.getDocumentElement().normalize();
 			root = doc.getDocumentElement();
 			topNodes = root.getChildNodes();
-
+			out = o;
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
 	}
 
 	public static void main(String[] args) {
+		PrintStream out = System.out;
 		if (args.length == 0) {
-			System.out.println("Usage: PCodeParser pcodefile.xml");
+			out.println("Usage: PCodeParser pcodefile.xml");
 			return;
 		}
-		PCodeParser p = new PCodeParser(args[0]);
+		PCodeParser p = new PCodeParser(args[0], out);
 		p.parseProgram(p.topNodes);
 		Scanner in = new Scanner(System.in);
 		boolean done = false;
-		PCodeInterpreter interpreter = new PCodeInterpreter(p.program);
-		System.out.print("> ");
+		PCodeInterpreter interpreter = new PCodeInterpreter(p.program, out);
+		out.print("> ");
 		while (!done && in.hasNextLine()) {
 			String cmd = in.next();
 			if (cmd.contains("quit")) { 
@@ -70,19 +73,19 @@ public class PCodeParser {
 			} else if (cmd.contains("run")) {
 				String funcToRun = in.next();
 				in.nextLine();
-				interpreter.runInteractive(funcToRun, in); // TODO: parse and pass args
+				done = interpreter.runInteractive(funcToRun, in); // TODO: parse and pass args
 			} else if (cmd.contains("bro")) {
-				System.out.println("Functions:");
+				out.println("Functions:");
 				for (Enumeration<PCodeFunction> e = interpreter.p.functions.elements(); e.hasMoreElements(); ) {
 					PCodeFunction f = e.nextElement();
-					System.out.println("name: " + f.name);
+					out.println("name: " + f.name);
 				}
 			} else {
-				System.out.println("{browse|run <func_name>|quit}");
+				out.println("{browse|run <func_name>|quit}");
 			}
-			System.out.print("> ");
+			out.print("> ");
 		}
-		System.out.println("Bye!");
+		out.println("Bye!");
 	}
 
 	public PCodeProgram parseProgram(NodeList topElts) {
@@ -122,7 +125,7 @@ public class PCodeParser {
 			// at this level, the element will be function, parameter_description, or basicblock
 			if (eltName.startsWith("function")) {
 				ret.name = funcElt.getAttribute("name"); // could extract "size" here too, don't know what it does
-				System.out.println("Parsing function " + ret.name);
+				out.println("Parsing function " + ret.name);
 			} else if (eltName.startsWith("parameter_description")) {
 				// need to give Sean a function with defined parameters to know what to do here
 			} else if (eltName.startsWith("basicblock")) {
@@ -188,7 +191,7 @@ public class PCodeParser {
 				} else if (argTag.equals("spaceid")){
 					continue;
 				} else {
-					System.out.println("unexpected tag " + argTag + " where opcode arg belongs " + op.toString());
+					out.println("unexpected tag " + argTag + " where opcode arg belongs " + op.toString());
 				}
 			}
 		}
@@ -229,7 +232,7 @@ public class PCodeParser {
 		for (Iterator<AddrValuePair>i = addrPairs.iterator(); i.hasNext();) {
 			AddrValuePair e = i.next();
 			dataSegment.contents.put(e.address, e.value);
-			// System.out.println("@ " + e.address + " -> " + e.value);
+			// out.println("@ " + e.address + " -> " + e.value);
 		}
 		dataSegment.wordsize = 8;
 	}

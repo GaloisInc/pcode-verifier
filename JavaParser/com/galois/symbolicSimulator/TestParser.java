@@ -15,7 +15,7 @@ public class TestParser {
 	
 	@BeforeClass
 	public static void initialize() {
-		parser = new PCodeParser("fib.xml");
+		parser = new PCodeParser("fib.xml", System.out);
 		parser.parseProgram(parser.topNodes);
 		program = parser.program;
 		m = new PCodeMachineState(program);

@@ -32,7 +32,7 @@ public class PCodeMachineState {
 		if (ret == null) {
 			ret = new PCodeSpace(spaceName, program.archSpec);
 			spaces.put(spaceName, ret);
-			System.out.println("creating space " + spaceName);
+			// System.out.println("creating space " + spaceName);
 		}
 		return ret;
 	}

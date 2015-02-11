@@ -53,7 +53,7 @@ public class Varnode {
 	
 	void storeByte(int i, int val) {
 		if (space.constSpace) {
-			System.out.println("storeByte to Const Space?");
+			System.err.println("storeByte to Const Space?");
 			// TODO - should exit here? won't happen with proper PCode...
 		}
 		space.contents.put(offset.add(BigInteger.valueOf(i)), val & 0xff);
@@ -77,7 +77,7 @@ public class Varnode {
 			ret = ret.shiftLeft(8);
 			Integer v = space.contents.get(offset.add(BigInteger.valueOf(index)));
 			if (v == null) {
-				System.out.println("Warning: fetching uninitialized word");
+				System.err.println("Warning: fetching uninitialized word");
 			} else {
 				ret = ret.add(BigInteger.valueOf(v.intValue()));
 			}
@@ -102,7 +102,7 @@ public class Varnode {
 			ret = ret.shiftLeft(8);
 			Integer v = space.contents.get(offset.add(BigInteger.valueOf(index)));
 			if (v == null) {
-				System.out.println("Warning: fetching uninitialized word");
+				System.err.println("Warning: fetching uninitialized word");
 			} else {
 				if (!gotSignBit) {
 					signBit = (v.intValue() >> 7) & 1;
@@ -211,7 +211,7 @@ public class Varnode {
 			Integer srcVal = space.getByte(this.offset, (int) i);
 			if (srcVal == null) {
 				srcVal = new Integer((int) 0);
-				System.out.println("Warning: copyTo from uninitialized word @0x" +
+				System.err.println("Warning: copyTo from uninitialized word @0x" +
 						offset.add(BigInteger.valueOf(i)).toString(16));
 			}
 			dest.space.contents.put(dest.offset.add(BigInteger.valueOf(i)), srcVal);
