@@ -1,11 +1,15 @@
 package com.galois.symbolicSimulator;
 
+import java.util.List;
+import java.util.LinkedList;
+
 // A PCodeFunction is a named collection of PCode instructions.
 public class PCodeFunction {
-	String name;
-	PCodeScope scope;
+	public String name;
+	public PCodeScope scope;
 	public Varnode macroEntryPoint;
 	public int length;
+        public List<Varnode> basicBlocks = new LinkedList<Varnode>();
 	
 	public String toString(PCodeMachineState m) {
 		String ret = name + ":\n";

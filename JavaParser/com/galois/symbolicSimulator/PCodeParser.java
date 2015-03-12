@@ -76,8 +76,7 @@ public class PCodeParser {
 				done = interpreter.runInteractive(funcToRun, in); // TODO: parse and pass args
 			} else if (cmd.contains("bro")) {
 				out.println("Functions:");
-				for (Enumeration<PCodeFunction> e = interpreter.p.functions.elements(); e.hasMoreElements(); ) {
-					PCodeFunction f = e.nextElement();
+				for (PCodeFunction f : interpreter.p.getFunctions() ) {
 					out.println("name: " + f.name);
 				}
 			} else {
@@ -86,6 +85,10 @@ public class PCodeParser {
 			out.print("> ");
 		}
 		out.println("Bye!");
+	}
+
+        public PCodeProgram parseProgram() {
+	    return parseProgram(this.topNodes);
 	}
 
 	public PCodeProgram parseProgram(NodeList topElts) {
@@ -131,6 +134,7 @@ public class PCodeParser {
 			} else if (eltName.startsWith("basicblock")) {
 				Varnode newBlockHead = parseBlock(funcElt, firstBlock, ret);
 				firstBlock = false;
+				ret.basicBlocks.add(newBlockHead);
 				if (ret.macroEntryPoint == null) {
 					ret.macroEntryPoint = newBlockHead;
 				}

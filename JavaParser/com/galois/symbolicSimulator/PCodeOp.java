@@ -38,6 +38,20 @@ public class PCodeOp {
 		input0 = i0;
 	}
 	
+        public boolean isBranch() {
+	        switch(opcode) {
+			case BRANCH:
+			case BRANCHIND:
+			case RETURN:
+			case CALL:
+			case CALLIND:
+			case CBRANCH:
+				return true;
+			default:
+				return false;
+		}
+	}
+
 	public String toString() {
 		return toString(null);
 	}
