@@ -5,6 +5,7 @@ import java.math.BigInteger;
 // OpCodes
 public class PCodeOp {
 	PCodeOpCode opcode = null;
+        String space_id = null;
 	Varnode input0 = null;
 	Varnode output = null;
 	Varnode input1 = null;
@@ -21,8 +22,9 @@ public class PCodeOp {
 		output = o;		
 	}
 
-	public PCodeOp(PCodeOpCode code, Varnode o, Varnode i0, Varnode i1, BigInteger off, int u, boolean firstInBlock, boolean firstInFunc, PCodeFunction func) {
+        public PCodeOp(PCodeOpCode code, String sid, Varnode o, Varnode i0, Varnode i1, BigInteger off, int u, boolean firstInBlock, boolean firstInFunc, PCodeFunction func) {
 		opcode = code;
+		space_id = sid;
 		input0 = i0;
 		input1 = i1;
 		output = o;
@@ -68,6 +70,7 @@ public class PCodeOp {
 		if (uniq > 0) ret += "  ";
 		ret += "0x" + offset.toString(16) + " (" + uniq + "): ";
 		ret += opcode.name() + " ";
+		if (space_id != null) { ret += "{" + space_id + "} "; }
 		if (output != null) ret += output.toString();
 		else ret += "<null>";
 		if (numArgs() == 0) {
@@ -104,15 +107,7 @@ public class PCodeOp {
 	int numArgs() {
 		switch (opcode) {
 			case BRANCH:
-			case BRANCHIND:
-			case RETURN:
-			case CALL:
-			case CALLIND:
-				return 0;
 			case COPY:
-			case LOAD:
-			case STORE:
-			case CBRANCH:
 			case BOOL_NEGATE:
 			case INT_NEGATE:
 			case INT_ZEXT:

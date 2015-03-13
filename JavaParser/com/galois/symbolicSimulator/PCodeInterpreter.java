@@ -33,7 +33,9 @@ public class PCodeInterpreter {
 	// PCode is a bit weird on LOAD and STORE - 
 	// the 2 arg versions of these take a register destination Varnode,
 	// but really point into RAM (harumph)
-	void load(Varnode dest, Varnode src) throws Exception {
+        void load(Varnode dest, String space_id, Varnode src) throws Exception {
+	    // FIXME: use space_id
+
 		assert dest != null : "LOAD dest is null";
 		assert src  != null : "LOAD src is null";
 		dest.loadIndirect(src, m.getRAMspace());
@@ -45,7 +47,8 @@ public class PCodeInterpreter {
 	// dereferencing the pointer. The wordsize attribute has no effect
 	// on any of the other p-code operations"
 	// TODO: is this properly implemented here (and above in load)
-	void store(Varnode dest, Varnode src) throws Exception {
+        void store(String space_id, Varnode dest, Varnode src) throws Exception {
+	    // FIXME: use space_id
 		dest.storeIndirect(src,m.getRAMspace());
 	}
 
@@ -73,34 +76,34 @@ public class PCodeInterpreter {
 				break;
 			case LOAD:
 				// output = *input0
-				load(op.output, op.input0);
+   			        load(op.output, op.space_id, op.input0);
 				break;
 			case STORE:
-				// *output = input1 (check?)
-				store(op.output, op.input0);
+				// *input0 = input1 (check?)
+			        store(op.space_id, op.input0, op.input1);
 				break;
 			case BRANCH:
-				m.microPC = m.program.codeSegment.microAddrOfMacroInstr(op.output.offset);
+				m.microPC = m.program.codeSegment.microAddrOfMacroInstr(op.input0.offset);
 				break;
 			case CBRANCH:
 				lhs = op.input0.fetchUnsigned();
 				if (!lhs.equals(BigInteger.ZERO)) {
-					m.microPC = m.program.codeSegment.microAddrOfMacroInstr(op.output.offset);
+					m.microPC = m.program.codeSegment.microAddrOfMacroInstr(op.input0.offset);
 				}
 				break;
 			case BRANCHIND:
-				lhs = op.output.fetchUnsigned();
+				lhs = op.input0.fetchUnsigned();
 				m.microPC = m.program.codeSegment.microAddrOfMacroInstr(lhs);
 				break;
 			case CALL:
-				m.microPC = m.program.codeSegment.microAddrOfMacroInstr(op.output.offset);
+				m.microPC = m.program.codeSegment.microAddrOfMacroInstr(op.input0.offset);
 				break;
 			case CALLIND:
-				lhs = op.output.fetchUnsigned();
+				lhs = op.input0.fetchUnsigned();
 				m.microPC = m.program.codeSegment.microAddrOfMacroInstr(lhs);
 				break;
 			case RETURN:
-				lhs = op.output.fetchUnsigned();
+				lhs = op.input0.fetchUnsigned();
 				m.microPC = m.program.codeSegment.microAddrOfMacroInstr(lhs);
 				break;
 			case PIECE:

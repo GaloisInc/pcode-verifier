@@ -173,6 +173,7 @@ public class PCodeParser {
 
 	public PCodeOp parseOp(Element op, boolean firstInBlock, boolean firstInFunction, PCodeFunction f) {
 		String opcode = op.getAttribute("mnemonic");
+		String space_id = null;
 		NodeList argNodes = op.getChildNodes();
 		Varnode[] args = new Varnode[3];
 		BigInteger offset = null;
@@ -191,8 +192,11 @@ public class PCodeParser {
 					uniq = Integer.decode(argE.getAttribute("uniq"));
 					offset = parseBigHex(argE.getAttribute("offset"));
 				} else if (argTag.equals("void")){ 
+				        // skip a slot when we encounter the void tag
+   				        argi++;
 					continue;
 				} else if (argTag.equals("spaceid")){
+				        space_id = argE.getAttribute("name");
 					continue;
 				} else {
 					out.println("unexpected tag " + argTag + " where opcode arg belongs " + op.toString());
@@ -200,7 +204,9 @@ public class PCodeParser {
 			}
 		}
 		
-		PCodeOp ret = new PCodeOp(PCodeOp.PCodeOpCode.valueOf(opcode), args[0],args[1],args[2],offset,uniq,firstInBlock, firstInFunction, f);
+		PCodeOp ret = new PCodeOp(PCodeOp.PCodeOpCode.valueOf(opcode),
+					  space_id, args[0], args[1], args[2],
+					  offset, uniq, firstInBlock, firstInFunction, f);
 
 		return ret;
 	}
