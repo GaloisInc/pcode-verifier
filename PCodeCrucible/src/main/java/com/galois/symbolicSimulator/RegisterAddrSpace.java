@@ -7,26 +7,26 @@ import com.galois.crucible.*;
 import com.galois.crucible.cfg.*;
 
 public final class RegisterAddrSpace extends AddrSpaceManager {
-    Map<BigInteger,Reg> regMap;
-    Procedure proc;
-    static final int regSize = 8; // registers are always 8-bits
+    static final int regSize = 8; // registers are always 8 bits
 
-    public RegisterAddrSpace( PCodeArchSpec arch, Procedure proc )
+    Procedure proc;
+    long regFileSize;
+    Type regFileType;
+    Reg registerFile;
+
+
+    public RegisterAddrSpace( PCodeArchSpec arch, Procedure proc, long regFileSize )
     {
 	super(arch);
 	this.proc = proc;
-	regMap = new HashMap<BigInteger,Reg>();
+	this.regFileSize = regFileSize;
+	regFileType = Type.vector( Type.bitvector(regSize) );
+	registerFile = proc.newReg( regFileType );
     }
 
-    Reg getReg( BigInteger offset ) throws Exception
+    public Reg getRegisterFile()
     {
-	Reg r = regMap.get( offset );
-	if( r == null ) {
-	    r = proc.newReg( Type.bitvector(regSize) );
-	    regMap.put( offset, r );
-	}
-
-	return r;
+	return registerFile;
     }
 
     public Expr loadDirect( Block bb, BigInteger offset, int size )
@@ -35,15 +35,18 @@ public final class RegisterAddrSpace extends AddrSpaceManager {
 	if( size < 0 ) { 
 	    throw new UnsupportedOperationException( "invalid load size " + size  );
 	}
-
 	if( size == 0 ) {
 	    return bb.bvLiteral( 0, BigInteger.ZERO );
 	}
+	if( offset.intValue() + size >= regFileSize ) {
+	    throw new UnsupportedOperationException( "invalid load from register file: out of bounds: " + offset + " " + size );
+	}
 
+	Expr regs = bb.read (registerFile);
 	Expr[] bytes = new Expr[size];
 	int i = 0;
 	for( BigInteger idx : indexEnumerator( offset, size ) ) {
-	    bytes[i++] = bb.read( getReg(idx) );
+	    bytes[i++] = bb.vectorGetEntry( regs, bb.natLiteral(idx) );
 	}
 	
 	return bb.bvConcat(bytes);
@@ -56,13 +59,23 @@ public final class RegisterAddrSpace extends AddrSpaceManager {
 	    throw new UnsupportedOperationException( "invalid store size " + size  );
 	}
 	if( size == 0 ) { return; }
+	if( offset.intValue() + size >= regFileSize ) {
+	    throw new UnsupportedOperationException( "invalid store to register file: out of bounds: " + offset + " " + size );
+	}
+	if( !(e.type().isBitvector() && e.type().width() == regSize*size) ) {
+	    throw new UnsupportedOperationException( "type mismatch when storing to register file: " + size + " " + e.type().toString() );
+	}
 	
+	Expr regs = bb.read(registerFile);
+
 	int i = 0;
 	for( BigInteger idx : indexEnumerator( offset, size ) ) {
 	    Expr er = bb.bvSelect( regSize * i, regSize, e );
-	    bb.write( getReg(idx), er );
+	    regs = bb.vectorSetEntry( regs, bb.natLiteral(idx), er );
 	    i++;
 	}
+
+	bb.write(registerFile, regs);
     }
 
     public Expr loadIndirect( Block bb, Varnode vn, int size )

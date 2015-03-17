@@ -56,13 +56,16 @@ class PCodeCrucible {
 	// FIXME figure out the correct types
 	Procedure proc = new Procedure( sim, fn.name, new Type[] { }, Type.UNIT );
 
+	Block entry_bb = null;
+
 	// Set up crucible basic blocks to correspond to the PCode basic blocks
 	Map<Varnode, Block> blockmap = new HashMap<Varnode, Block>();
 	for( Varnode vn : fn.basicBlocks ) {
 	    Block bb;
 
 	    if( vn.equals( fn.macroEntryPoint ) ){
-		bb = proc.getEntryBlock();
+		bb = proc.newBlock();
+		entry_bb = bb;
 		System.out.println("Using Entry point: " +bb.toString());
 	    } else {
 		bb = proc.newBlock();
@@ -75,16 +78,48 @@ class PCodeCrucible {
 	//PCodeArchSpec arch = prog.archSpec; 
 	PCodeArchSpec arch = new PCodeArchSpec(); // FIXME
 
+	// Seems to be enough for the X86 examples we have
+	int regFileSize = 1024;
+
 	addrSpaces = new HashMap<String, AddrSpaceManager>();
+
+	RegisterAddrSpace regs = new RegisterAddrSpace( arch, proc, regFileSize );
+	TempAddrSpace temps = new TempAddrSpace( arch, proc );
+	RAMAddrSpace ram = new RAMAddrSpace( arch, proc, 64, addrSpaces );
+
 	addrSpaces.put("const"     , new ConstAddrSpace( arch ) );
-	addrSpaces.put("register"  , new RegisterAddrSpace( arch, proc ) );
-	addrSpaces.put("unique"    , new RegisterAddrSpace( arch, proc ) );
-	addrSpaces.put("ram"       , new RegisterAddrSpace( arch, proc ) ); // FIXME
+	addrSpaces.put("register"  , regs );
+	addrSpaces.put("unique"    , temps );
+	addrSpaces.put("ram"       , ram );
 
 	// Build the basic blocks
 	for( Varnode vn : fn.basicBlocks ) {
 	    buildBasicBlock( fn, vn, blockmap );
 	}
+
+	// Now build the CFG prelude before jumping to the real entry point
+	Block bb = proc.getEntryBlock();
+
+	// FIXME THIS IS TOTALLY BOGUS
+	// Set the initial value of RAM to totally empty
+	Reg ramReg = ram.getRAM();
+	bb.write( ramReg, bb.emptyWordMap( 64, Type.bitvector(8)) );
+
+	// FIXME THIS IS TOTALLY BOGUS
+	// Set the initial value of all registers to zero
+	Reg regFile = regs.getRegisterFile();
+	bb.write(regFile, bb.vectorReplicate( bb.natLiteral(regFileSize), bb.bvLiteral(8, 0) ));
+
+	// Set the initial value of all temps to zero
+	for( Reg r : temps ) {
+	    bb.write( r, bb.bvLiteral( r.type().width(), 0 ) );
+	}
+
+	// Jump to the real entry point
+	bb.jump(entry_bb);
+
+	// Print the generated CFG for debugging purposes
+	sim.printCFG(proc);
 
 	return proc;
     }
@@ -149,6 +184,14 @@ class PCodeCrucible {
 	case COPY:
 	    e = getInput( o.input0 );
 	    setOutput( o, e );
+	    break;
+        case LOAD:
+	    e = addrSpaces.get( o.space_id ).loadIndirect( curr_bb, o.input0, o.output.size );
+	    setOutput( o, e );
+	    break;
+	case STORE:
+	    e = getInput( o.input1 );
+	    addrSpaces.get( o.space_id ).storeIndirect( curr_bb, o.input0, o.input1.size, e );
 	    break;
         case INT_EQUAL:
 	    e1 = getInput( o.input0 );
@@ -323,29 +366,27 @@ class PCodeCrucible {
 	    setOutput( o, e );
 	    break;
 
+
 	// FIXME, operations yet to be implemented
 	case INT_CARRY:
 	case INT_SCARRY:
 	case INT_SBORROW:
-        case LOAD:
-	case STORE:
         case PIECE:
 	case SUBPIECE:
+	case CALL:
+	case CALLIND:
 	    System.out.println( "FIXME nyi: " + o.toString() );
 	    break;
 
 	case BRANCH:
 	case CBRANCH:
 	case BRANCHIND:
-	case CALL:
-	case CALLIND:
 	case RETURN:
 	    throw new Exception("Unexpected block terminator in addOpToBlock "+o.toString());
 
         default:
 	    throw new Exception("Unsupported instruction " + o.toString() );
 	}
-
     }
     
     Block lookupBlock( PCodeFunction func, Map<Varnode,Block> blockmap, BigInteger offset ) throws Exception
@@ -357,6 +398,24 @@ class PCodeCrucible {
 	}
 
 	throw new Exception( "Invalid branch target: " + offset );
+    }
+
+    Block lookupNextBlock( PCodeFunction func, Map<Varnode,Block> blockmap, Block bb ) throws Exception
+    {
+	Iterator<Varnode> it = func.basicBlocks.iterator();
+	while( it.hasNext() ) {
+	    Varnode vn = it.next();
+	    if( blockmap.get(vn) == bb ) {
+		if( it.hasNext() ) {
+		    vn = it.next();
+		    return blockmap.get(vn);
+		} else {
+		    throw new Exception("Block has no next block! " + bb.toString());
+		}
+	    }
+	}
+
+	throw new Exception( "Block not found in lookupNextBlock: " + bb.toString() );
     }
 
     void terminateBlock( PCodeFunction fn, Map<Varnode,Block> blockmap, PCodeOp o ) throws Exception
@@ -374,23 +433,20 @@ class PCodeCrucible {
 	    break;
 	    
 	case CBRANCH:
-	    /*
 	    e = getInput( o.input1 );
-	    e = bb.bvNonzero( e );
+	    e = curr_bb.bvNonzero( e );
 	    {
-		Block tgt = lookupBlock( fn, blockmap, o.input0.offset );
-		Procedure proc = bb.getProcedure();
-		Block newbb = proc.newBlock();
-		bb.branch( e, tgt, newbb );
-		curr_bb = newbb;
+		tgt  = lookupBlock( fn, blockmap, o.input0.offset );
+		Block next = lookupNextBlock( fn, blockmap, curr_bb );
+		curr_bb.branch( e, tgt, next );
 	    }
 	    break;
-	    */
 
 	case BRANCHIND:
 	case CALL:
 	case CALLIND:
 	case RETURN:
+	    curr_bb.jump(curr_bb); // FIXME, jump back to ourselves just to make a valid, terminated block
 	    System.out.println("FIXME: nyi!");
 	    break;
 
