@@ -129,6 +129,24 @@ public class PCodeParser {
 			if (eltName.startsWith("function")) {
 				ret.name = funcElt.getAttribute("name"); // could extract "size" here too, don't know what it does
 				out.println("Parsing function " + ret.name);
+
+				NodeList innerElts = funcElt.getChildNodes();
+				for(int j=0; j < innerElts.getLength(); j++) {
+				    Node innerNode = innerElts.item(j);
+				    if(!(innerNode instanceof Element)) continue;
+
+				    Element innerElt = (Element) innerNode;
+				    String innerName = innerElt.getNodeName();
+
+				    if( innerName.equals("addr") ) {
+					String space_name = innerElt.getAttribute("space");
+					BigInteger offset = parseBigHex(innerElt.getAttribute("offset"));
+					int size = 1; // FIXME? is this right? does it matter?
+					ret.macroEntryPoint = new Varnode( program, space_name, offset, size );
+				    }
+				    // FIXME... bunch of other stuff here....
+				}
+
 			} else if (eltName.startsWith("parameter_description")) {
 				// need to give Sean a function with defined parameters to know what to do here
 			} else if (eltName.startsWith("basicblock")) {
