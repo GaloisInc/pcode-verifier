@@ -7,17 +7,6 @@ import com.galois.crucible.*;
 import com.galois.crucible.cfg.*;
 
 class PCodeCrucible {
-    Simulator sim;
-    PCodeProgram prog;
-    Block curr_bb;
-    Map<String, AddrSpaceManager> addrSpaces;
-
-    public PCodeCrucible( Simulator sim, PCodeProgram prog )
-    {
-	this.sim = sim;
-	this.prog = prog;
-    }
-
     public static void main( String[] args ) throws Exception {
 	if( args.length != 2 ) {
 	    System.err.println("Usage: "+ System.getProperty("app.name") + " <pcodefile>");
@@ -33,49 +22,47 @@ class PCodeCrucible {
 	Simulator sim = Simulator.launchLocal(crucibleServerPath);
 	try {
 	    PCodeCrucible x = new PCodeCrucible( sim, prog );
-	    x.buildCFGs();
+	    x.buildCFG( "pcodeCFG" );
 	} finally {
 	    sim.close();
 	}
     }
 
-    public List<Procedure> buildCFGs() throws Exception {
-	LinkedList<Procedure> procs = new LinkedList<Procedure>();
-	for( PCodeFunction fn :  prog.getFunctions() ) {
-	    if( fn.basicBlocks.size() > 0 ) {
-		procs.add( buildCFG( fn ) );
-	    }
-	}
-	return procs;
+
+    static final long cellWidth = 8;
+    long addrWidth;
+
+    Simulator sim;
+    PCodeProgram prog;
+
+    Procedure proc;
+    Map<String, AddrSpaceManager> addrSpaces;
+    Map<BigInteger, Block> codeSegment;
+    Block trampoline;
+    Reg trampolinePC;
+    Set<BigInteger> visitedAddr;
+
+    Block curr_bb;
+
+    public PCodeCrucible( Simulator sim, PCodeProgram prog )
+    {
+	this.sim = sim;
+	this.prog = prog;
+	this.addrWidth = 64;
     }
 
-    public Procedure buildCFG( PCodeFunction fn ) throws Exception {
-	System.out.println("Building CFG for function " + fn.name );
+    public Procedure buildCFG( String name ) throws Exception {
+	Type[] types = new Type[]
+	    { Type.bitvector( addrWidth ),
+	      Type.vector( Type.bitvector(cellWidth) ),
+	      Type.wordMap( addrWidth, Type.bitvector(cellWidth) )
+	    };
+	proc = new Procedure( sim, name, types, Type.UNIT );
 
-	// Build a new procedure
-	// FIXME figure out the correct types
-	Procedure proc = new Procedure( sim, fn.name, new Type[] { }, Type.UNIT );
+	trampoline   = proc.newBlock();
+	trampolinePC = proc.newReg( Type.bitvector( addrWidth ) );
+	codeSegment  = new HashMap<BigInteger, Block>();
 
-	Block entry_bb = null;
-
-	// Set up crucible basic blocks to correspond to the PCode basic blocks
-	Map<Varnode, Block> blockmap = new HashMap<Varnode, Block>();
-	for( Varnode vn : fn.basicBlocks ) {
-	    Block bb;
-
-	    if( vn.equals( fn.macroEntryPoint ) ){
-		bb = proc.newBlock();
-		entry_bb = bb;
-		System.out.println("Using Entry point: " +bb.toString());
-	    } else {
-		bb = proc.newBlock();
-		System.out.println("New block: " +bb.toString());
-	    }
-
-	    blockmap.put( vn, bb );
-	}
-
-	//PCodeArchSpec arch = prog.archSpec; 
 	PCodeArchSpec arch = new PCodeArchSpec(); // FIXME
 
 	// Seems to be enough for the X86 examples we have
@@ -83,40 +70,31 @@ class PCodeCrucible {
 
 	addrSpaces = new HashMap<String, AddrSpaceManager>();
 
+	ConstAddrSpace consts = new ConstAddrSpace( arch );
 	RegisterAddrSpace regs = new RegisterAddrSpace( arch, proc, regFileSize );
 	TempAddrSpace temps = new TempAddrSpace( arch, proc );
 	RAMAddrSpace ram = new RAMAddrSpace( arch, proc, 64, addrSpaces );
 
-	addrSpaces.put("const"     , new ConstAddrSpace( arch ) );
+	addrSpaces.put("const"     , consts );
 	addrSpaces.put("register"  , regs );
 	addrSpaces.put("unique"    , temps );
 	addrSpaces.put("ram"       , ram );
 
-	// Build the basic blocks
-	for( Varnode vn : fn.basicBlocks ) {
-	    buildBasicBlock( fn, vn, blockmap );
+	visitedAddr = new HashSet<BigInteger>();
+	for( PCodeFunction fn : prog.getFunctions() ) {
+	    if( fn.basicBlocks != null && fn.basicBlocks.size() > 0 ) {
+		for( Varnode fnbb : fn.basicBlocks ) {
+		    visitPCodeBlock( fn, fnbb );
+		}
+	    } else {
+		Block bb = fetchBB( fn.macroEntryPoint.offset );
+		System.out.println( "UNIMPLEMENTED: " + fn.name + " " + fn.macroEntryPoint.offset );
+		bb.reportError(new StringValue("Unimplemented function!"));
+	    }
 	}
 
-	// Now build the CFG prelude before jumping to the real entry point
-	Block bb = proc.getEntryBlock();
-
-	// FIXME THIS IS TOTALLY BOGUS
-	// Set the initial value of RAM to totally empty
-	Reg ramReg = ram.getRAM();
-	bb.write( ramReg, bb.emptyWordMap( 64, Type.bitvector(8)) );
-
-	// FIXME THIS IS TOTALLY BOGUS
-	// Set the initial value of all registers to zero
-	Reg regFile = regs.getRegisterFile();
-	bb.write(regFile, bb.vectorReplicate( bb.natLiteral(regFileSize), bb.bvLiteral(8, 0) ));
-
-	// Set the initial value of all temps to zero
-	for( Reg r : temps ) {
-	    bb.write( r, bb.bvLiteral( r.type().width(), 0 ) );
-	}
-
-	// Jump to the real entry point
-	bb.jump(entry_bb);
+	constructTrampoline();
+	finalizeCFG( regs.getRegisterFile(), ram.getRAM() );
 
 	// Print the generated CFG for debugging purposes
 	sim.printCFG(proc);
@@ -124,36 +102,99 @@ class PCodeCrucible {
 	return proc;
     }
 
-    void buildBasicBlock( PCodeFunction fn, Varnode vn, Map<Varnode,Block> blockmap )
-	throws Exception {
+    void constructTrampoline() throws Exception
+    {
+	Block bb = trampoline;
 
-	curr_bb = blockmap.get(vn);
-	System.out.println("Building basic block " + fn.name + " " + vn.toString() + " " + curr_bb.toString() );
+	for( BigInteger off : codeSegment.keySet() ) {
 
-	int microPC = prog.codeSegment.microAddrOfVarnode(vn);
+	    Block next = proc.newBlock();
+	    Block tgt = codeSegment.get(off);
+	    Expr e = bb.bvEq( bb.read(trampolinePC), bb.bvLiteral( addrWidth, off )) ;
+
+	    bb.branch( e, tgt, next );
+
+	    bb = next;
+	}
+
+	// Tried to indirect jump to an unknown address... RETURN!
+	bb.returnExpr( new UnitValue() );
+    }
+
+    void finalizeCFG( Reg registerFile, Reg ramReg ) throws Exception
+    {
+	Expr pc       = proc.getArg(0);
+	Expr initRegs = proc.getArg(1);
+	Expr initRam  = proc.getArg(2);
+
+	Block bb = proc.getEntryBlock();
+	bb.write( trampolinePC, pc );
+	bb.write( registerFile, initRegs );
+	bb.write( ramReg, initRam );
+	bb.jump( trampoline );
+    }
+
+
+    Block fetchBB( BigInteger offset ) {
+	Block bb = codeSegment.get( offset );
+	if( bb == null ) {
+	    bb = proc.newBlock();
+	    codeSegment.put( offset, bb );
+	}
+	return bb;
+    }
+
+    void visitPCodeBlock( PCodeFunction fn, Varnode fnbb )  throws Exception {
+	if( visitedAddr.contains( fnbb.offset ) ) { return; }
+
+	curr_bb = fetchBB( fnbb.offset );
+	System.out.println("Building basic block " + fn.name + " " + fnbb.offset.toString() + " " + curr_bb.toString() );
+
+	BigInteger macroPC = fnbb.offset;
+	visitedAddr.add( fnbb.offset );
+	int microPC = prog.codeSegment.microAddrOfVarnode(fnbb);
+	int fnend = microPC + fn.length;
 
 	PCodeOp o = prog.codeSegment.fetch(microPC);
-	int i = 0;
+
 
 	if( !o.blockStart ) {
-	    throw new Exception( "Invalid start of basic block " + vn.toString() );
+	    throw new Exception( "Invalid start of basic block " + fnbb.offset.toString() );
 	} else {
 	    System.out.println("START OF BLOCK");
 	}
-	
-	while( o != null && !o.isBranch() && i < fn.length ) {
-	    addOpToBlock( o );
 
-	    i++;
-	    o = prog.codeSegment.fetch(microPC + i);
+	while( o != null && !o.isBranch() && microPC < fnend ) {
+	    addOpToBlock( fn, o, microPC );
+
+	    microPC++;
+	    o = prog.codeSegment.fetch(microPC);
+
+	    // Create a new crucible basic block if we are at a new opcode
+	    if( !o.offset.equals( macroPC ) ) {
+		Block bb = fetchBB( o.offset );
+		if( curr_bb != null ) {
+		    curr_bb.jump( bb );
+		}
+
+		curr_bb = bb;
+		macroPC = o.offset;
+		visitedAddr.add( macroPC );
+	    }
 	}
 
 	if( o != null && o.isBranch() ) {
-	    terminateBlock( fn, blockmap, o );
+	    addOpToBlock( fn, o, microPC );
 	} else {
-	    throw new Exception( "Invalid basic block" + vn.toString() );
+	    throw new Exception( "Invalid basic block" + fnbb.toString() );
+	}
+
+
+	if( curr_bb != null ) {
+	    System.out.println("Possible unterminated block! "+ macroPC);
 	}
     }
+
 
     AddrSpaceManager getSpace( Varnode vn ) throws Exception {
 	AddrSpaceManager m = addrSpaces.get( vn.space_name );
@@ -173,7 +214,7 @@ class PCodeCrucible {
 	getSpace( o.output ).storeDirect( curr_bb, o.output.offset, o.output.size, e );
     }
 
-    void addOpToBlock( PCodeOp o ) throws Exception
+    void addOpToBlock( PCodeFunction fn, PCodeOp o, int microPC ) throws Exception
     {
 	System.out.println( o.toString() );
 
@@ -192,6 +233,28 @@ class PCodeCrucible {
 	case STORE:
 	    e = getInput( o.input1 );
 	    addrSpaces.get( o.space_id ).storeIndirect( curr_bb, o.input0, o.input1.size, e );
+	    break;
+        case PIECE:
+	    e1 = getInput( o.input0 );
+	    e2 = getInput( o.input1 );
+	    e = bb.bvConcat( e1, e2 );
+	    setOutput( o, e );
+	    break;
+        case SUBPIECE:
+	    if( !o.input1.space_name.equals( "const" ) ) {
+		throw new UnsupportedOperationException("Second argument to SUBPIECE is required to be constant");
+	    }
+	    {
+		e = getInput( o.input0 );
+		long toTrunc = o.input1.offset.intValue();
+		if( toTrunc > 0 ) {
+		    e = bb.bvLshr( e, bb.bvLiteral( o.input0.size * 8, toTrunc * 8 ) );
+		}
+		if( o.input0.size - toTrunc > o.output.size  ) {
+		    e = bb.bvTrunc( e, o.output.size * 8 );
+		}
+		setOutput( o, e );
+	    }
 	    break;
         case INT_EQUAL:
 	    e1 = getInput( o.input0 );
@@ -235,13 +298,34 @@ class PCodeCrucible {
 	    e = bb.boolToBV( e, o.output.size*8 );
 	    setOutput( o, e );
 	    break;
+	case INT_CARRY:
+	    e1 = getInput( o.input0 );
+	    e2 = getInput( o.input1 );
+	    e = bb.bvCarry( e1, e2 );
+	    e = bb.boolToBV( e, o.output.size*8 );
+	    setOutput( o, e );
+	    break;
+	case INT_SCARRY:
+	    e1 = getInput( o.input0 );
+	    e2 = getInput( o.input1 );
+	    e = bb.bvSCarry( e1, e2 );
+	    e = bb.boolToBV( e, o.output.size*8 );
+	    setOutput( o, e );
+	    break;
+	case INT_SBORROW:
+	    e1 = getInput( o.input0 );
+	    e2 = getInput( o.input1 );
+	    e = bb.bvSBorrow( e1, e2 );
+	    e = bb.boolToBV( e, o.output.size*8 );
+	    setOutput( o, e );
+	    break;
 	case INT_ZEXT:
 	    e = getInput( o.input0 );
 	    e = bb.bvZext( e, o.output.size*8 );
 	    setOutput( o, e );
 	    break;
 	case INT_SEXT:
-	    e = getInput( o.input0 ); 
+	    e = getInput( o.input0 );
 	    e = bb.bvSext( e, o.output.size*8 );
 	    setOutput( o, e );
 	    break;
@@ -257,14 +341,12 @@ class PCodeCrucible {
 	    e = bb.bvSub( e1, e2 );
 	    setOutput( o, e );
 	    break;
-
 	case INT_NEGATE:
 	    e1 = getInput( o.input0 );
 	    // FIXME? should we directly expose a unary negation operator?
 	    e = bb.bvSub( bb.bvLiteral( o.input0.size*8, 0 ), e1 );
 	    setOutput( o, e );
 	    break;
-
 	case INT_XOR:
 	    e1 = getInput( o.input0 );
 	    e2 = getInput( o.input1 );
@@ -366,95 +448,38 @@ class PCodeCrucible {
 	    setOutput( o, e );
 	    break;
 
-
-	// FIXME, operations yet to be implemented
-	case INT_CARRY:
-	case INT_SCARRY:
-	case INT_SBORROW:
-        case PIECE:
-	case SUBPIECE:
-	case CALL:
-	case CALLIND:
-	    System.out.println( "FIXME nyi: " + o.toString() );
-	    break;
-
 	case BRANCH:
-	case CBRANCH:
+	case CALL: {
+	    Block tgt = fetchBB( o.input0.offset );
+	    curr_bb.jump(tgt);
+	    curr_bb = null;
+	    break;
+	}
+
+	case CBRANCH: {
+	    e = getInput( o.input1 );
+	    e = curr_bb.bvNonzero( e );
+	    Block tgt  = fetchBB( o.input0.offset );
+	    PCodeOp nextop = prog.codeSegment.fetch(microPC + 1);
+	    Block next = fetchBB( nextop.offset );
+	    curr_bb.branch( e, tgt, next );
+	    curr_bb = null;
+	    break;
+	}
+
 	case BRANCHIND:
-	case RETURN:
-	    throw new Exception("Unexpected block terminator in addOpToBlock "+o.toString());
+	case CALLIND:
+	case RETURN: {
+	    e = getInput( o.input0 );
+	    curr_bb.write( trampolinePC, e );
+	    curr_bb.jump( trampoline );
+	    curr_bb = null;
+	    break;
+	}
 
         default:
 	    throw new Exception("Unsupported instruction " + o.toString() );
 	}
-    }
-    
-    Block lookupBlock( PCodeFunction func, Map<Varnode,Block> blockmap, BigInteger offset ) throws Exception
-    {
-	for( Varnode vn : func.basicBlocks ) {
-	    if( vn.offset.equals( offset ) ) {
-		return blockmap.get( vn );
-	    }
-	}
-
-	throw new Exception( "Invalid branch target: " + offset );
-    }
-
-    Block lookupNextBlock( PCodeFunction func, Map<Varnode,Block> blockmap, Block bb ) throws Exception
-    {
-	Iterator<Varnode> it = func.basicBlocks.iterator();
-	while( it.hasNext() ) {
-	    Varnode vn = it.next();
-	    if( blockmap.get(vn) == bb ) {
-		if( it.hasNext() ) {
-		    vn = it.next();
-		    return blockmap.get(vn);
-		} else {
-		    throw new Exception("Block has no next block! " + bb.toString());
-		}
-	    }
-	}
-
-	throw new Exception( "Block not found in lookupNextBlock: " + bb.toString() );
-    }
-
-    void terminateBlock( PCodeFunction fn, Map<Varnode,Block> blockmap, PCodeOp o ) throws Exception
-    {
-	Block tgt;
-	Expr e;
-
-	System.out.println("BLOCK TERMINATOR");
-	System.out.println( o.toString() );
-
-	switch( o.opcode ) {
-	case BRANCH:
-	    tgt = lookupBlock( fn, blockmap, o.input0.offset );
-	    curr_bb.jump(tgt);
-	    break;
-	    
-	case CBRANCH:
-	    e = getInput( o.input1 );
-	    e = curr_bb.bvNonzero( e );
-	    {
-		tgt  = lookupBlock( fn, blockmap, o.input0.offset );
-		Block next = lookupNextBlock( fn, blockmap, curr_bb );
-		curr_bb.branch( e, tgt, next );
-	    }
-	    break;
-
-	case BRANCHIND:
-	case CALL:
-	case CALLIND:
-	case RETURN:
-	    curr_bb.jump(curr_bb); // FIXME, jump back to ourselves just to make a valid, terminated block
-	    System.out.println("FIXME: nyi!");
-	    break;
-
-	default:
-	    throw new Exception("Unexpected instruction in terminateBlock "+o.toString());
-	}
-
-	curr_bb = null;
     }
 
 }
