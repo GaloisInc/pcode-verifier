@@ -2,6 +2,7 @@ package com.galois.symbolicSimulator;
 
 import java.math.BigInteger;
 import java.util.*;
+import java.util.function.Consumer;
 
 import com.galois.crucible.*;
 import com.galois.crucible.cfg.*;
@@ -21,8 +22,35 @@ class PCodeCrucible {
 
 	Simulator sim = Simulator.launchLocal(crucibleServerPath);
 	try {
+	    sim.addPrintMessageListener(new Consumer<String>() {
+		    public void accept(String x) {
+			System.out.print(x);
+			System.out.flush();
+		    }
+		});
+
+	    sim.addPathAbortedListener(new Consumer<String>() {
+		    public void accept(String x) {
+			System.out.println("Path aborted: " + x);
+			System.out.flush();
+		    }
+		});
+
 	    PCodeCrucible x = new PCodeCrucible( sim, prog );
-	    x.buildCFG( "pcodeCFG" );
+	    Procedure proc = x.buildCFG( "pcodeCFG" );
+
+	    sim.useCfg(proc);
+
+	    SimulatorValue initpc  = sim.bvLiteral( addrWidth, 0 );
+	    SimulatorValue initreg = sim.vectorReplicate( sim.natLiteral( regFileSize ),
+							  sim.bvLiteral( cellWidth, 0 ) );
+	    SimulatorValue initram = sim.emptyWordMap( addrWidth, Type.bitvector(cellWidth) );
+
+	    sim.setVerbosity( 5 );
+
+	    SimulatorValue v = sim.runCall(proc.getHandle(), initpc, initreg, initram );
+	    System.out.println( v.toString() );
+
 	} finally {
 	    sim.close();
 	}
@@ -30,7 +58,9 @@ class PCodeCrucible {
 
 
     static final long cellWidth = 8;
-    long addrWidth;
+    static final long addrWidth = 64;
+    // Seems to be enough for the X86 examples we have
+    static final int regFileSize = 1024;
 
     Simulator sim;
     PCodeProgram prog;
@@ -42,31 +72,33 @@ class PCodeCrucible {
     Reg trampolinePC;
     Set<BigInteger> visitedAddr;
 
+
     Block curr_bb;
 
     public PCodeCrucible( Simulator sim, PCodeProgram prog )
     {
 	this.sim = sim;
 	this.prog = prog;
-	this.addrWidth = 64;
     }
 
     public Procedure buildCFG( String name ) throws Exception {
+	Type regFileType = Type.vector( Type.bitvector(cellWidth) );
+	Type ramType     = Type.wordMap( addrWidth, Type.bitvector(cellWidth) );
+
 	Type[] types = new Type[]
 	    { Type.bitvector( addrWidth ),
-	      Type.vector( Type.bitvector(cellWidth) ),
-	      Type.wordMap( addrWidth, Type.bitvector(cellWidth) )
+	      regFileType,
+	      ramType
 	    };
-	proc = new Procedure( sim, name, types, Type.UNIT );
+	Type retType = Type.struct( types );
+
+	proc = new Procedure( sim, name, types, retType );
 
 	trampoline   = proc.newBlock();
 	trampolinePC = proc.newReg( Type.bitvector( addrWidth ) );
 	codeSegment  = new HashMap<BigInteger, Block>();
 
 	PCodeArchSpec arch = new PCodeArchSpec(); // FIXME
-
-	// Seems to be enough for the X86 examples we have
-	int regFileSize = 1024;
 
 	addrSpaces = new HashMap<String, AddrSpaceManager>();
 
@@ -89,11 +121,21 @@ class PCodeCrucible {
 	    } else {
 		Block bb = fetchBB( fn.macroEntryPoint.offset );
 		System.out.println( "UNIMPLEMENTED: " + fn.name + " " + fn.macroEntryPoint.offset );
-		bb.reportError(new StringValue("Unimplemented function!"));
+
+		// BAIL OUT!
+		{
+		    Expr pc   = bb.read(trampolinePC);
+		    Expr regs2 = bb.read(regs.getRegisterFile());
+		    Expr ram2  = bb.read(ram.getRAM());
+		    Expr ret  = bb.structLiteral( pc, regs2, ram2 );
+		    bb.returnExpr( ret );
+		}
+
+		//		bb.reportError(new StringValue("Unimplemented function!"));
 	    }
 	}
 
-	constructTrampoline();
+	constructTrampoline( regs.getRegisterFile(), ram.getRAM() );
 	finalizeCFG( regs.getRegisterFile(), ram.getRAM() );
 
 	// Print the generated CFG for debugging purposes
@@ -102,7 +144,7 @@ class PCodeCrucible {
 	return proc;
     }
 
-    void constructTrampoline() throws Exception
+    void constructTrampoline( Reg registerFile, Reg ramReg ) throws Exception
     {
 	Block bb = trampoline;
 
@@ -118,7 +160,11 @@ class PCodeCrucible {
 	}
 
 	// Tried to indirect jump to an unknown address... RETURN!
-	bb.returnExpr( new UnitValue() );
+	Expr pc   = bb.read(trampolinePC);
+	Expr regs = bb.read(registerFile);
+	Expr ram  = bb.read(ramReg);
+	Expr ret  = bb.structLiteral( pc, regs, ram );
+	bb.returnExpr( ret );
     }
 
     void finalizeCFG( Reg registerFile, Reg ramReg ) throws Exception
@@ -128,12 +174,28 @@ class PCodeCrucible {
 	Expr initRam  = proc.getArg(2);
 
 	Block bb = proc.getEntryBlock();
+
+	initRam = setupDataSegment( bb, initRam );
+
 	bb.write( trampolinePC, pc );
 	bb.write( registerFile, initRegs );
 	bb.write( ramReg, initRam );
 	bb.jump( trampoline );
     }
 
+    Expr setupDataSegment( Block bb, Expr ram )
+    {
+	SortedMap<BigInteger, Integer> ramMap = prog.dataSegment.contents;
+
+	for( BigInteger offset : ramMap.keySet() ) {
+	    int val = ramMap.get(offset).intValue();
+	    ram = bb.insertWordMap( bb.bvLiteral( addrWidth, offset ),
+				    bb.bvLiteral( cellWidth, val ),
+				    ram );
+	}
+
+	return ram;
+    }
 
     Block fetchBB( BigInteger offset ) {
 	Block bb = codeSegment.get( offset );
