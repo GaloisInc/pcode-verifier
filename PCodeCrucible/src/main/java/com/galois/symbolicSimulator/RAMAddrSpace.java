@@ -46,7 +46,7 @@ public final class RAMAddrSpace extends AddrSpaceManager {
 	Expr[] bytes = new Expr[size];
 	int i = 0;
 	for( BigInteger idx : indexEnumerator( offset, size ) ) {
-	    bytes[i++] = bb.lookupWordMap( ram, bb.bvLiteral( addrWidth, idx ) );
+	    bytes[i++] = bb.lookupWordMap( bb.bvLiteral( addrWidth, idx ), ram );
 	}
 
 	return bb.bvConcat(bytes);
@@ -64,7 +64,7 @@ public final class RAMAddrSpace extends AddrSpaceManager {
 	int i = 0;
 	for( BigInteger idx : indexEnumerator( offset, size ) ) {
 	    Expr er = bb.bvSelect( cellSize * i, cellSize, e );
-	    ram = bb.insertWordMap( ram, bb.bvLiteral( addrWidth, idx), er );
+	    ram = bb.insertWordMap( bb.bvLiteral( addrWidth, idx), er, ram );
 	    i++;
 	}
 
