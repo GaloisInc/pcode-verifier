@@ -44,6 +44,8 @@ public final class RAMAddrSpace extends AddrSpaceManager {
 
 	Expr ram = bb.read(ramReg);
 	Expr[] bytes = new Expr[size];
+
+	// Enumerate from MSB first (at i = 0) to LSB (at i = size - 1)
 	int i = 0;
 	for( BigInteger idx : indexEnumerator( offset, size ) ) {
 	    bytes[i++] = bb.lookupWordMap( bb.bvLiteral( addrWidth, idx ), ram );
@@ -61,10 +63,12 @@ public final class RAMAddrSpace extends AddrSpaceManager {
 	if( size == 0 ) { return; }
 
 	Expr ram = bb.read(ramReg);
+
+	// Enumerate from MSB first (at i = 0) to LSB (at i = size - 1)
 	int i = 0;
 	for( BigInteger idx : indexEnumerator( offset, size ) ) {
-	    Expr er = bb.bvSelect( cellSize * i, cellSize, e );
-	    ram = bb.insertWordMap( bb.bvLiteral( addrWidth, idx), er, ram );
+	    Expr er = bb.bvSelect( cellSize * (size - i - 1), cellSize, e );
+	    ram = bb.insertWordMap( bb.bvLiteral( addrWidth, idx ), er, ram );
 	    i++;
 	}
 
@@ -93,6 +97,8 @@ public final class RAMAddrSpace extends AddrSpaceManager {
 
 	Expr ram = bb.read(ramReg);
 	Expr[] bytes = new Expr[size];
+
+	// Enumerate from MSB first (at i = 0) to LSB (at i = size - 1)
 	int i = 0;
 	for( BigInteger idx : indexEnumerator( BigInteger.ZERO, size ) ) {
 	    bytes[i++] = bb.lookupWordMap( bb.bvAdd( baseAddr, bb.bvLiteral( addrWidth, idx )), ram );
@@ -119,9 +125,11 @@ public final class RAMAddrSpace extends AddrSpaceManager {
 	}
 
 	Expr ram = bb.read(ramReg);
+
+	// Enumerate from MSB first (at i = 0) to LSB (at i = size - 1)
 	int i = 0;
 	for( BigInteger idx : indexEnumerator( BigInteger.ZERO, size ) ) {
-	    Expr er = bb.bvSelect( cellSize * i, cellSize, e );
+	    Expr er = bb.bvSelect( cellSize * (size - i - 1), cellSize, e );
 	    ram = bb.insertWordMap( bb.bvAdd( baseAddr, bb.bvLiteral( addrWidth, idx )), er, ram );
 	    i++;
 	}

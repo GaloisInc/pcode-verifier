@@ -44,6 +44,8 @@ public final class RegisterAddrSpace extends AddrSpaceManager {
 
 	Expr regs = bb.read (registerFile);
 	Expr[] bytes = new Expr[size];
+
+	// Enumerate from MSB first (at i = 0) to LSB (at i = size - 1)
 	int i = 0;
 	for( BigInteger idx : indexEnumerator( offset, size ) ) {
 	    bytes[i++] = bb.vectorGetEntry( regs, bb.natLiteral(idx) );
@@ -68,9 +70,10 @@ public final class RegisterAddrSpace extends AddrSpaceManager {
 	
 	Expr regs = bb.read(registerFile);
 
+	// Enumerate from MSB first (at i = 0) to LSB (at i = size - 1)
 	int i = 0;
 	for( BigInteger idx : indexEnumerator( offset, size ) ) {
-	    Expr er = bb.bvSelect( regSize * i, regSize, e );
+	    Expr er = bb.bvSelect( regSize * (size - i - 1), regSize, e );
 	    regs = bb.vectorSetEntry( regs, bb.natLiteral(idx), er );
 	    i++;
 	}

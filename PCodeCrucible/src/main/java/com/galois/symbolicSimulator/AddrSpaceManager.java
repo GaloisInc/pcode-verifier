@@ -83,7 +83,11 @@ abstract class AddrSpaceManager {
 	}
     }
 
-
+    /**
+     * Enumerate the offsets of a multibyte value with base <code>offset</code>
+     * in an order that gives the most significant byte offsets first and
+     * least significant byte offsets last.
+     */
     Iterable<BigInteger> indexEnumerator(final BigInteger offset, final int size) {
 	if( arch.bigEndianP ) {
 	    return new CountUpIter(offset, size);

@@ -8,6 +8,19 @@ import com.galois.crucible.*;
 import com.galois.crucible.cfg.*;
 
 class PCodeCrucible {
+    // how many bits are stored in an individual memory cell
+    static final long cellWidth = 8;
+
+    static final int byteWidth = 8;
+
+    // how many bits wide are memory addresses
+    static final long addrWidth = byteWidth * 8;
+
+
+    // how many bytes are in the register file
+    // this seems to be enough for the X86-64 examples we have
+    static final int regFileSize = 1024;
+
     public static void main( String[] args ) throws Exception {
 	if( args.length != 2 ) {
 	    System.err.println("Usage: "+ System.getProperty("app.name") + " <pcodefile>");
@@ -37,6 +50,7 @@ class PCodeCrucible {
 		});
 
 	    PCodeCrucible x = new PCodeCrucible( sim, prog );
+
 	    Procedure proc = x.buildCFG( "pcodeCFG" );
 
 	    sim.useCfg(proc);
@@ -46,21 +60,67 @@ class PCodeCrucible {
 							  sim.bvLiteral( cellWidth, 0 ) );
 	    SimulatorValue initram = sim.emptyWordMap( addrWidth, Type.bitvector(cellWidth) );
 
-	    sim.setVerbosity( 5 );
+	    //SimulatorValue fibarg = sim.bvLiteral( 8, 9 );
+	    //SimulatorValue fibarg = sim.freshConstant( VarType.bitvector(8) );
+	    //initreg = sim.vectorSetEntry( initreg, sim.natLiteral( 0x38l ), fibarg );
+
+	    //SimulatorValue arg1 = sim.freshConstant( VarType.bitvector(8) );
+	    SimulatorValue arg2 = sim.freshConstant( VarType.bitvector(8) );
+	    //SimulatorValue asdf = sim.bvAdd( arg1, arg2 );
+	    //System.out.println( "ASDFASDF " + asdf );
+
+
+	    SimulatorValue arg1 = sim.bvLiteral( 8, 12 );
+	    //SimulatorValue arg2 = sim.bvLiteral( 8, 35 );
+
+	    initreg = sim.vectorSetEntry( initreg, sim.natLiteral( 0x38l ), arg1 );
+	    initreg = sim.vectorSetEntry( initreg, sim.natLiteral( 0x30l ), arg2 );
+
+	    // sim.setVerbosity( 5 );
 
 	    SimulatorValue v = sim.runCall(proc.getHandle(), initpc, initreg, initram );
-	    System.out.println( v.toString() );
+
+	    SimulatorValue finalpc  = sim.structGet( 0, v );
+	    SimulatorValue finalreg = sim.structGet( 1, v );
+	    SimulatorValue finalram = sim.structGet( 2, v );
+
+	    System.out.println( finalpc );
+
+	    System.out.println( sim.vectorGetEntry( finalreg, sim.natLiteral( 0 ) ));
+	    System.out.println( sim.vectorGetEntry( finalreg, sim.natLiteral( 1 ) ));
+	    System.out.println( sim.vectorGetEntry( finalreg, sim.natLiteral( 2 ) ));
+	    System.out.println( sim.vectorGetEntry( finalreg, sim.natLiteral( 3 ) ));
+	    System.out.println( sim.vectorGetEntry( finalreg, sim.natLiteral( 4 ) ));
+	    System.out.println( sim.vectorGetEntry( finalreg, sim.natLiteral( 5 ) ));
+	    System.out.println( sim.vectorGetEntry( finalreg, sim.natLiteral( 6 ) ));
+	    System.out.println( sim.vectorGetEntry( finalreg, sim.natLiteral( 7 ) ));
+
+	    SimulatorValue zerobyte = sim.bvLiteral( 8, 0 );
+	    SimulatorValue fortytwo = sim.bvLiteral( 8, 42 );
+
+	    SimulatorValue q = sim.eq( zerobyte, zerobyte );
+	    q = sim.and( q, sim.eq( sim.vectorGetEntry( finalreg, sim.natLiteral( 7 )), zerobyte ));
+	    q = sim.and( q, sim.eq( sim.vectorGetEntry( finalreg, sim.natLiteral( 6 )), zerobyte ));
+	    q = sim.and( q, sim.eq( sim.vectorGetEntry( finalreg, sim.natLiteral( 5 )), zerobyte ));
+	    q = sim.and( q, sim.eq( sim.vectorGetEntry( finalreg, sim.natLiteral( 4 )), zerobyte ));
+	    q = sim.and( q, sim.eq( sim.vectorGetEntry( finalreg, sim.natLiteral( 3 )), zerobyte ));
+	    q = sim.and( q, sim.eq( sim.vectorGetEntry( finalreg, sim.natLiteral( 2 )), zerobyte ));
+	    q = sim.and( q, sim.eq( sim.vectorGetEntry( finalreg, sim.natLiteral( 1 )), zerobyte ));
+	    q = sim.and( q, sim.eq( sim.vectorGetEntry( finalreg, sim.natLiteral( 0 )), fortytwo ));
+
+	    //q = sim.and( q, sim.eq( arg2, sim.bvLiteral( 8, 30 )) );
+
+	    sim.writeSmtlib2( "asdf.smt2", q );
+
+	    System.out.println( "Answer: " + sim.checkSatWithAbc( q ) );
+
+				// System.out.println( finalram );
 
 	} finally {
 	    sim.close();
 	}
     }
 
-
-    static final long cellWidth = 8;
-    static final long addrWidth = 64;
-    // Seems to be enough for the X86 examples we have
-    static final int regFileSize = 1024;
 
     Simulator sim;
     PCodeProgram prog;
@@ -98,14 +158,16 @@ class PCodeCrucible {
 	trampolinePC = proc.newReg( Type.bitvector( addrWidth ) );
 	codeSegment  = new HashMap<BigInteger, Block>();
 
-	PCodeArchSpec arch = new PCodeArchSpec(); // FIXME
+	PCodeArchSpec arch = new PCodeArchSpec();
+	arch.bigEndianP = false;
+	arch.wordSize = byteWidth;
 
 	addrSpaces = new HashMap<String, AddrSpaceManager>();
 
 	ConstAddrSpace consts = new ConstAddrSpace( arch );
 	RegisterAddrSpace regs = new RegisterAddrSpace( arch, proc, regFileSize );
 	TempAddrSpace temps = new TempAddrSpace( arch, proc );
-	RAMAddrSpace ram = new RAMAddrSpace( arch, proc, 64, addrSpaces );
+	RAMAddrSpace ram = new RAMAddrSpace( arch, proc, addrWidth, addrSpaces );
 
 	addrSpaces.put("const"     , consts );
 	addrSpaces.put("register"  , regs );
@@ -122,16 +184,15 @@ class PCodeCrucible {
 		Block bb = fetchBB( fn.macroEntryPoint.offset );
 		System.out.println( "UNIMPLEMENTED: " + fn.name + " " + fn.macroEntryPoint.offset );
 
-		// BAIL OUT!
+		// Bail out...
 		{
-		    Expr pc   = bb.read(trampolinePC);
+		    Expr pc    = bb.read(trampolinePC);
 		    Expr regs2 = bb.read(regs.getRegisterFile());
 		    Expr ram2  = bb.read(ram.getRAM());
-		    Expr ret  = bb.structLiteral( pc, regs2, ram2 );
+		    Expr ret   = bb.structLiteral( pc, regs2, ram2 );
 		    bb.returnExpr( ret );
 		}
 
-		//		bb.reportError(new StringValue("Unimplemented function!"));
 	    }
 	}
 
@@ -180,6 +241,33 @@ class PCodeCrucible {
 	bb.write( trampolinePC, pc );
 	bb.write( registerFile, initRegs );
 	bb.write( ramReg, initRam );
+
+	///////////////////////////////////////////////////////
+	// Here, lets do some bogus additional setup to get the
+	// fib.xml example working....
+	AddrSpaceManager regs = addrSpaces.get("register");
+	AddrSpaceManager ram  = addrSpaces.get("ram");
+
+	// store 0x4000 (start of the stack) into %rsp
+	regs.storeDirect( bb, BigInteger.valueOf( 0x20l ), byteWidth,
+			  bb.bvLiteral( addrWidth, 0x4000l ) );
+
+	// store 0x4000 (start of the stack) into %rbp
+	regs.storeDirect( bb, BigInteger.valueOf( 0x28l ), byteWidth,
+			  bb.bvLiteral( addrWidth, 0x4000l ) );
+
+	// store 0x7 into %rdi (first argument register)
+	//regs.storeDirect( bb, BigInteger.valueOf( 0x38l ), 8,
+	//                  bb.bvLiteral( 64, 11 ) );
+	//		  );
+
+	// set the return address on the stack
+	ram.storeDirect( bb, BigInteger.valueOf( 0x4000l ), byteWidth,
+			 bb.bvLiteral( addrWidth, 0xdeadbeef )
+		       );
+	// End bogus additional setup...
+	///////////////////////////////////////////////////////
+
 	bb.jump( trampoline );
     }
 
@@ -227,7 +315,7 @@ class PCodeCrucible {
 	}
 
 	while( o != null && !o.isBranch() && microPC < fnend ) {
-	    addOpToBlock( fn, o, microPC );
+	    addOpToBlock( o, microPC );
 
 	    microPC++;
 	    o = prog.codeSegment.fetch(microPC);
@@ -246,7 +334,7 @@ class PCodeCrucible {
 	}
 
 	if( o != null && o.isBranch() ) {
-	    addOpToBlock( fn, o, microPC );
+	    addOpToBlock( o, microPC );
 	} else {
 	    throw new Exception( "Invalid basic block" + fnbb.toString() );
 	}
@@ -276,7 +364,7 @@ class PCodeCrucible {
 	getSpace( o.output ).storeDirect( curr_bb, o.output.offset, o.output.size, e );
     }
 
-    void addOpToBlock( PCodeFunction fn, PCodeOp o, int microPC ) throws Exception
+    void addOpToBlock( PCodeOp o, int microPC ) throws Exception
     {
 	System.out.println( o.toString() );
 
