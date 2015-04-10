@@ -179,6 +179,12 @@ class PCodeCrucible {
 	    if( fn.basicBlocks != null && fn.basicBlocks.size() > 0 ) {
 		for( Varnode fnbb : fn.basicBlocks ) {
 		    visitPCodeBlock( fn, fnbb );
+
+		    // Clear the set of temporaray registers after visiting each basic block.
+		    // It is not entirely clear what are the scoping rules that govern the
+		    // temporary address space, but perhaps it is correct to assume they
+		    // scope across an entire basic block...
+		    temps.clearRegisters();
 		}
 	    } else {
 		Block bb = fetchBB( fn.macroEntryPoint.offset );
@@ -298,15 +304,16 @@ class PCodeCrucible {
 	if( visitedAddr.contains( fnbb.offset ) ) { return; }
 
 	curr_bb = fetchBB( fnbb.offset );
-	System.out.println("Building basic block " + fn.name + " " + fnbb.offset.toString() + " " + curr_bb.toString() );
-
+	System.out.println("Building basic block " + fn.name + " " + fnbb.offset.toString(16) + " " + curr_bb.toString() );
 	BigInteger macroPC = fnbb.offset;
 	visitedAddr.add( fnbb.offset );
 	int microPC = prog.codeSegment.microAddrOfVarnode(fnbb);
-	int fnend = microPC + fn.length;
+
+	int fnstart = prog.codeSegment.microAddrOfVarnode(fn.macroEntryPoint);
+	int fnend   = fnstart + fn.length;
+	System.out.println( "fn bounds: " + fnstart + " " + microPC + " " + fnend );
 
 	PCodeOp o = prog.codeSegment.fetch(microPC);
-
 
 	if( !o.blockStart ) {
 	    throw new Exception( "Invalid start of basic block " + fnbb.offset.toString() );
@@ -318,6 +325,12 @@ class PCodeCrucible {
 	    addOpToBlock( o, microPC );
 
 	    microPC++;
+	    if( !(microPC < fnend) ) {
+		o = null;
+		break;
+	    }
+
+	    System.out.println( "fetching: " + microPC );
 	    o = prog.codeSegment.fetch(microPC);
 
 	    // Create a new crucible basic block if we are at a new opcode
@@ -335,9 +348,11 @@ class PCodeCrucible {
 
 	if( o != null && o.isBranch() ) {
 	    addOpToBlock( o, microPC );
-	} else {
-	    throw new Exception( "Invalid basic block" + fnbb.toString() );
 	}
+	// Some basic blocks end in a call.... so what to do here?
+	// else {
+	//	    throw new Exception( "Invalid basic block" + fnbb.toString() );
+	//}
 
 
 	if( curr_bb != null ) {
@@ -400,7 +415,7 @@ class PCodeCrucible {
 		if( toTrunc > 0 ) {
 		    e = bb.bvLshr( e, bb.bvLiteral( o.input0.size * 8, toTrunc * 8 ) );
 		}
-		if( o.input0.size - toTrunc > o.output.size  ) {
+		if( o.input0.size > o.output.size  ) {
 		    e = bb.bvTrunc( e, o.output.size * 8 );
 		}
 		setOutput( o, e );
@@ -491,10 +506,15 @@ class PCodeCrucible {
 	    e = bb.bvSub( e1, e2 );
 	    setOutput( o, e );
 	    break;
-	case INT_NEGATE:
+	case INT_2COMP:
 	    e1 = getInput( o.input0 );
 	    // FIXME? should we directly expose a unary negation operator?
 	    e = bb.bvSub( bb.bvLiteral( o.input0.size*8, 0 ), e1 );
+	    setOutput( o, e );
+	    break;
+	case INT_NEGATE:
+	    e1 = getInput( o.input0 );
+	    e = bb.bvNot( e1 );
 	    setOutput( o, e );
 	    break;
 	case INT_XOR:
@@ -518,18 +538,60 @@ class PCodeCrucible {
 	case INT_LEFT:
 	    e1 = getInput( o.input0 );
 	    e2 = getInput( o.input1 );
+
+	    // zero extend input 1 if necessary
+	    if( o.input0.size > o.input1.size ) {
+		e2 = bb.bvZext( e2, o.input0.size * 8 );
+	    }
+
+	    // truncate input 1 if necessary
+	    // This is safe to do because the maximum possible
+	    // shift is expressible in (significantly) fewer bits
+	    // than the size of input0
+	    if( o.input0.size < o.input1.size ) {
+		e2 = bb.bvTrunc( e2, o.input0.size * 8 );
+	    }
+
 	    e = bb.bvShl( e1, e2 );
 	    setOutput( o, e );
 	    break;
 	case INT_RIGHT:
 	    e1 = getInput( o.input0 );
 	    e2 = getInput( o.input1 );
+
+	    // zero extend input 1 if necessary
+	    if( o.input0.size > o.input1.size ) {
+		e2 = bb.bvZext( e2, o.input0.size * 8 );
+	    }
+
+	    // truncate input 1 if necessary
+	    // This is safe to do because the maximum possible
+	    // shift is expressible in (significantly) fewer bits
+	    // than the size of input0
+	    if( o.input0.size < o.input1.size ) {
+		e2 = bb.bvTrunc( e2, o.input0.size * 8 );
+	    }
+
 	    e = bb.bvLshr( e1, e2 );
 	    setOutput( o, e );
 	    break;
 	case INT_SRIGHT:
 	    e1 = getInput( o.input0 );
 	    e2 = getInput( o.input1 );
+
+	    // zero extend input 1 if necessary
+	    if( o.input0.size > o.input1.size ) {
+		e2 = bb.bvZext( e2, o.input0.size * 8 );
+	    }
+
+	    // truncate input 1 if necessary
+	    // This is safe to do because the maximum possible
+	    // shift is expressible in (significantly) fewer bits
+	    // than the size of input0
+	    if( o.input0.size < o.input1.size ) {
+		e2 = bb.bvTrunc( e2, o.input0.size * 8 );
+	    }
+
 	    e = bb.bvAshr( e1, e2 );
 	    setOutput( o, e );
 	    break;

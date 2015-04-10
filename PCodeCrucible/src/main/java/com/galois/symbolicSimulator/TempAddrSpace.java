@@ -32,11 +32,17 @@ public final class TempAddrSpace extends AddrSpaceManager implements Iterable<Re
 	    regMap.put( offset, r );
 	} else {
 	    if( !(r.type().width() == bitsize) ) {
-		throw new Exception( "PCode Temporary used at inconsistent sizes" );
+		throw new Exception( "PCode Temporary used at inconsistent sizes: " +
+				     offset.toString(16) + " " + r.type().width() + " " + bitsize );
 	    }
 	}
 
 	return r;
+    }
+
+    public void clearRegisters()
+    {
+	regMap = new HashMap<BigInteger,Reg>();
     }
 
     public Expr loadDirect( Block bb, BigInteger offset, int size )
