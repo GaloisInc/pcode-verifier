@@ -81,7 +81,7 @@
 	    </platforms>
 	    <programs>
 	      <program>
-		<mainClass>com.galois.symbolicSimulator.PCodeCrucible</mainClass>
+		<mainClass>com.galois.symbolicSimulator.CrucibleMain</mainClass>
 		<id>pcode-crucible</id>
 		<commandLineArguments>
 		  <commandLineArgument>"${HOME}/code/mss/build/bin/crucible-server"</commandLineArgument>

@@ -11,7 +11,7 @@ abstract class AddrSpaceManager {
 
     public AddrSpaceManager( PCodeArchSpec arch )
     {
-	this.arch = arch;
+        this.arch = arch;
     }
 
     abstract public Expr loadDirect( Block bb, BigInteger offset, int size ) throws Exception;
@@ -22,65 +22,65 @@ abstract class AddrSpaceManager {
 
 
     class CountUpIter implements Iterator<BigInteger>, Iterable<BigInteger> {
-	public CountUpIter(BigInteger offset, int limit)
-	{
-	    this.offset = offset;
-	    this.limit = limit;
-	    curr = 0;
-	}
+        public CountUpIter(BigInteger offset, int limit)
+        {
+            this.offset = offset;
+            this.limit = limit;
+            curr = 0;
+        }
 
-	int limit;
-	int curr;
-	BigInteger offset;
+        int limit;
+        int curr;
+        BigInteger offset;
 
-	public boolean hasNext()
-	{
-	    return ( curr < limit );
-	}
+        public boolean hasNext()
+        {
+            return ( curr < limit );
+        }
 
-	public BigInteger next() {
-	    BigInteger e = offset.add( BigInteger.valueOf(curr) );
-	    curr++;
-	    return e;
-	}
+        public BigInteger next() {
+            BigInteger e = offset.add( BigInteger.valueOf(curr) );
+            curr++;
+            return e;
+        }
 
-	public Iterator<BigInteger> iterator() {
-	    return this;
-	}
+        public Iterator<BigInteger> iterator() {
+            return this;
+        }
 
-	public void remove() throws UnsupportedOperationException {
-	    throw new UnsupportedOperationException();
-	}
+        public void remove() throws UnsupportedOperationException {
+            throw new UnsupportedOperationException();
+        }
     }
 
     class CountDownIter implements Iterator<BigInteger>, Iterable<BigInteger> {
-	public CountDownIter(BigInteger offset, int limit)
-	{
-	    this.offset = offset;
-	    this.curr = limit-1;
-	}
+        public CountDownIter(BigInteger offset, int limit)
+        {
+            this.offset = offset;
+            this.curr = limit-1;
+        }
 
-	BigInteger offset;
-	int curr;
+        BigInteger offset;
+        int curr;
 
-	public Iterator<BigInteger> iterator() {
-	    return this;
-	}
+        public Iterator<BigInteger> iterator() {
+            return this;
+        }
 
-	public boolean hasNext()
-	{
-	    return ( curr >= 0 );
-	}
+        public boolean hasNext()
+        {
+            return ( curr >= 0 );
+        }
 
-	public BigInteger next() {
-	    BigInteger e = offset.add( BigInteger.valueOf(curr) );
-	    curr--;
-	    return e;
-	}
+        public BigInteger next() {
+            BigInteger e = offset.add( BigInteger.valueOf(curr) );
+            curr--;
+            return e;
+        }
 
-	public void remove() throws UnsupportedOperationException {
-	    throw new UnsupportedOperationException();
-	}
+        public void remove() throws UnsupportedOperationException {
+            throw new UnsupportedOperationException();
+        }
     }
 
     /**
@@ -89,11 +89,11 @@ abstract class AddrSpaceManager {
      * least significant byte offsets last.
      */
     Iterable<BigInteger> indexEnumerator(final BigInteger offset, final int size) {
-	if( arch.bigEndianP ) {
-	    return new CountUpIter(offset, size);
-	} else {
-	    return new CountDownIter(offset, size);
-	}
+        if( arch.bigEndianP ) {
+            return new CountUpIter(offset, size);
+        } else {
+            return new CountDownIter(offset, size);
+        }
     }
 
 }
