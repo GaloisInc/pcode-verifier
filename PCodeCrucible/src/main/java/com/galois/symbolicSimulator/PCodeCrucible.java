@@ -105,8 +105,24 @@ class PCodeCrucible {
             }
         }
 
-        constructTrampoline( registerFile, ramReg );
         finalizeCFG( registerFile, ramReg );
+    }
+
+    void finalizeCFG( Reg registerFile, Reg ramReg ) throws Exception
+    {
+        Expr pc       = proc.getArg(0);
+        Expr initRegs = proc.getArg(1);
+        Expr initRam  = proc.getArg(2);
+
+        Block bb = proc.getEntryBlock();
+
+        bb.write( trampolinePC, pc );
+        bb.write( registerFile, initRegs );
+        bb.write( ramReg, initRam );
+
+        bb.jump( trampoline );
+
+	constructTrampoline( registerFile, ramReg );
     }
 
     void constructTrampoline( Reg registerFile, Reg ramReg ) throws Exception
@@ -134,21 +150,6 @@ class PCodeCrucible {
         bb.returnExpr( ret );
     }
 
-    void finalizeCFG( Reg registerFile, Reg ramReg ) throws Exception
-    {
-        Expr pc       = proc.getArg(0);
-        Expr initRegs = proc.getArg(1);
-        Expr initRam  = proc.getArg(2);
-
-        Block bb = proc.getEntryBlock();
-
-        bb.write( trampolinePC, pc );
-        bb.write( registerFile, initRegs );
-        bb.write( ramReg, initRam );
-
-        bb.jump( trampoline );
-    }
-
     Block fetchBB( BigInteger offset ) {
         Block bb = blockMap.get( offset );
         if( bb == null ) {
@@ -162,21 +163,22 @@ class PCodeCrucible {
         if( visitedAddr.contains( fnbb.offset ) ) { return; }
 
         curr_bb = fetchBB( fnbb.offset );
-        System.out.println("Building basic block " + fn.name + " " + fnbb.offset.toString(16) + " " + curr_bb.toString() );
+        //System.out.println("Building basic block " + fn.name + " " + fnbb.offset.toString(16) + " " + curr_bb.toString() );
+
         BigInteger macroPC = fnbb.offset;
         visitedAddr.add( fnbb.offset );
         int microPC = prog.codeSegment.microAddrOfVarnode(fnbb);
 
         int fnstart = prog.codeSegment.microAddrOfVarnode(fn.macroEntryPoint);
         int fnend   = fnstart + fn.length;
-        System.out.println( "fn bounds: " + fnstart + " " + microPC + " " + fnend );
+        //System.out.println( "fn bounds: " + fnstart + " " + microPC + " " + fnend );
 
         PCodeOp o = prog.codeSegment.fetch(microPC);
 
         if( !o.blockStart ) {
             throw new Exception( "Invalid start of basic block " + fnbb.offset.toString() );
         } else {
-            System.out.println("START OF BLOCK");
+            // System.out.println("START OF BLOCK");
         }
 
         while( o != null && !o.isBranch() ) {
@@ -188,7 +190,7 @@ class PCodeCrucible {
                 break;
             }
 
-            System.out.println( "fetching: " + microPC );
+            //System.out.println( "fetching: " + microPC );
             o = prog.codeSegment.fetch(microPC);
 
             // Create a new crucible basic block if we are at a new opcode
@@ -239,7 +241,7 @@ class PCodeCrucible {
 
     void addOpToBlock( PCodeOp o, int microPC ) throws Exception
     {
-        System.out.println( o.toString() );
+        // System.out.println( o.toString() );
 
         Block bb = curr_bb;
         Expr e, e1, e2;
