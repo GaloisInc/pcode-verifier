@@ -38,9 +38,6 @@ class PCodeCrucible {
     // The register holding the PC to jump to for the trampoline
     Reg trampolinePC;
 
-    // Set of the code addresses we have previously visited
-    Set<BigInteger> visitedAddr;
-
     // The current Crucible basic block
     Block curr_bb;
 
@@ -74,14 +71,14 @@ class PCodeCrucible {
 
         this.addrSpaces   = addrSpaces;
         this.trampoline   = proc.newBlock();
+	this.trampoline.block_description = "trampoline block";
         this.trampolinePC = proc.newReg( Type.bitvector( addrWidth ) );
         this.blockMap     = new HashMap<BigInteger, Block>();
 
-        visitedAddr = new HashSet<BigInteger>();
         for( PCodeFunction fn : prog.getFunctions() ) {
             if( fn.basicBlocks != null && fn.basicBlocks.size() > 0 ) {
-                for( Varnode fnbb : fn.basicBlocks ) {
-                    visitPCodeBlock( fn, fnbb );
+                for( PCodeBasicBlock pcode_bb : fn.basicBlocks ) {
+                    visitPCodeBlock( fn, pcode_bb );
 
                     // Clear the set of temporaray registers after visiting each basic block.
                     // It is not entirely clear what are the scoping rules that govern the
@@ -132,6 +129,7 @@ class PCodeCrucible {
         for( BigInteger off : blockMap.keySet() ) {
 
             Block next = proc.newBlock();
+	    next.block_description = "mid-trampoline block";
             Block tgt = blockMap.get(off);
             Expr e = bb.bvEq( bb.read(trampolinePC), bb.bvLiteral( addrWidth, off )) ;
 
@@ -154,34 +152,35 @@ class PCodeCrucible {
         Block bb = blockMap.get( offset );
         if( bb == null ) {
             bb = proc.newBlock();
+	    bb.block_description = "PCode Block: " + offset.toString( 16 );
             blockMap.put( offset, bb );
         }
         return bb;
     }
 
-    void visitPCodeBlock( PCodeFunction fn, Varnode fnbb )  throws Exception {
-        if( visitedAddr.contains( fnbb.offset ) ) { return; }
+    void visitPCodeBlock( PCodeFunction fn, PCodeBasicBlock pcode_bb )  throws Exception {
 
-        curr_bb = fetchBB( fnbb.offset );
-        //System.out.println("Building basic block " + fn.name + " " + fnbb.offset.toString(16) + " " + curr_bb.toString() );
+        curr_bb = fetchBB( pcode_bb.blockBegin.offset );
+        System.out.println("Building basic block " + fn.name + " " + pcode_bb.blockBegin.offset.toString(16) +
+			   " " + pcode_bb.blockEnd.offset.toString(16) +
+			   " " + curr_bb.toString() );
 
-        BigInteger macroPC = fnbb.offset;
-        visitedAddr.add( fnbb.offset );
-        int microPC = prog.codeSegment.microAddrOfVarnode(fnbb);
+        BigInteger macroPC = pcode_bb.blockBegin.offset;
+        int microPC = prog.codeSegment.microAddrOfVarnode(pcode_bb.blockBegin);
 
         int fnstart = prog.codeSegment.microAddrOfVarnode(fn.macroEntryPoint);
         int fnend   = fnstart + fn.length;
-        //System.out.println( "fn bounds: " + fnstart + " " + microPC + " " + fnend );
+        System.out.println( "fn bounds: " + fnstart + " " + microPC + " " + fnend );
 
         PCodeOp o = prog.codeSegment.fetch(microPC);
 
         if( !o.blockStart ) {
-            throw new Exception( "Invalid start of basic block " + fnbb.offset.toString() );
+            throw new Exception( "Invalid start of basic block: " + pcode_bb.blockBegin.offset.toString(16) );
         } else {
-            // System.out.println("START OF BLOCK");
+            System.out.println("START OF BLOCK");
         }
 
-        while( o != null && !o.isBranch() ) {
+        while( o != null && o.offset.compareTo( pcode_bb.blockEnd.offset ) <= 0 ) {
             addOpToBlock( o, microPC );
 
             microPC++;
@@ -190,10 +189,10 @@ class PCodeCrucible {
                 break;
             }
 
-            //System.out.println( "fetching: " + microPC );
             o = prog.codeSegment.fetch(microPC);
 
-            // Create a new crucible basic block if we are at a new opcode
+            // Create a new crucible basic block if we are at a new offset and
+	    // end the current basic block by jumping
             if( !o.offset.equals( macroPC ) ) {
                 Block bb = fetchBB( o.offset );
                 if( curr_bb != null ) {
@@ -202,21 +201,11 @@ class PCodeCrucible {
 
                 curr_bb = bb;
                 macroPC = o.offset;
-                visitedAddr.add( macroPC );
             }
         }
 
-        if( o != null && o.isBranch() ) {
-            addOpToBlock( o, microPC );
-        }
-        // Some basic blocks end in a call.... so what to do here?
-        // else {
-        //          throw new Exception( "Invalid basic block" + fnbb.toString() );
-        //}
-
-
         if( curr_bb != null ) {
-            System.out.println("Possible unterminated block! "+ macroPC);
+            System.out.println("Possible unterminated block! " + macroPC.toString(16) );
         }
     }
 
@@ -241,7 +230,7 @@ class PCodeCrucible {
 
     void addOpToBlock( PCodeOp o, int microPC ) throws Exception
     {
-        // System.out.println( o.toString() );
+        System.out.println( o.toString() );
 
         Block bb = curr_bb;
         Expr e, e1, e2;
@@ -271,11 +260,28 @@ class PCodeCrucible {
         case CBRANCH: {
             e = getInput( o.input1 );
             e = curr_bb.bvNonzero( e );
-            Block tgt  = fetchBB( o.input0.offset );
+            Block tgt = fetchBB( o.input0.offset );
             PCodeOp nextop = prog.codeSegment.fetch(microPC + 1);
-            Block next = fetchBB( nextop.offset );
-            curr_bb.branch( e, tgt, next );
-            curr_bb = null;
+
+	    // A CBRANCH may occur in the middle of a block of micro-instructions.
+	    // In this case, we need to create a new Crucible basic block to represent
+	    // the microinstrutions occuring following the CBRANCH.
+	    //
+	    // However, if the memory offset of the following microinstruction is _different_
+	    // from our current offset, then the CBRANCH is the final microinstruction of
+	    // at that offset, and we instead need to fetch the block corresponding to the offset
+	    // of the following instruction.
+	    if( nextop.offset.equals( o.offset ) ) {
+		Block next = proc.newBlock();
+		next.block_description = "PCode internal block " + nextop.offset.toString( 16 ) + " " + nextop.uniq;
+		curr_bb.branch( e, tgt, next );
+		curr_bb = next;
+	    } else {
+		Block next = fetchBB( nextop.offset );
+		curr_bb.branch( e, tgt, next );
+		curr_bb = null;
+	    }
+
             break;
         }
 
