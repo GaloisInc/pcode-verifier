@@ -150,9 +150,10 @@ public class PCodeParser {
 			} else if (eltName.startsWith("parameter_description")) {
 				// need to give Sean a function with defined parameters to know what to do here
 			} else if (eltName.startsWith("basicblock")) {
-				Varnode newBlockHead = parseBlock(funcElt, firstBlock, ret);
+				PCodeBasicBlock block = parseBlock(funcElt, firstBlock, ret);
+				Varnode newBlockHead = block.blockBegin;
 				firstBlock = false;
-				ret.basicBlocks.add(newBlockHead);
+				ret.basicBlocks.add(block);
 				if (ret.macroEntryPoint == null) {
 					ret.macroEntryPoint = newBlockHead;
 				}
@@ -170,9 +171,9 @@ public class PCodeParser {
 	 * <op mnemonic="COPY" code="1"><seqnum space="ram" offset="0x0" uniq="0x0"/><addr space="unique" offset="0x1c30" size="8"/><addr space="register" offset="0x28" size="8"/></op>
      * <op mnemonic="INT_SUB" code="20"><seqnum space="ram" offset="0x0" uniq="0x1"/><addr space="register" offset="0x20" size="8"/><addr space="register" offset="0x20" size="8"/><addr space="const" offset="0x8" size="8"/></op>
 	 */
-	private Varnode parseBlock(Element blockElt, boolean firstBlock, PCodeFunction function) {
+	private PCodeBasicBlock parseBlock(Element blockElt, boolean firstBlock, PCodeFunction function) {
 		NodeList ops = blockElt.getChildNodes();
-		Varnode ret = null;
+		PCodeBasicBlock block = new PCodeBasicBlock();
 		boolean firstOp = true;
 		for (int i = 0; i < ops.getLength(); i++) {
 			Node opNode = ops.item(i);
@@ -181,12 +182,15 @@ public class PCodeParser {
 				PCodeOp op = parseOp(opElt, firstOp, firstBlock, function);
 				firstOp = false;
 				Varnode vn = program.codeSegment.addOp(op, program.codeSegment, program);
-				if (ret == null) {
-					ret = vn;
+				if (block.blockBegin == null) {
+					block.blockBegin = vn;
+				}
+				if (vn != null) {
+				    block.blockEnd = vn;
 				}
 			}
 		}
-		return ret;
+		return block;
 	}
 
 	public PCodeOp parseOp(Element op, boolean firstInBlock, boolean firstInFunction, PCodeFunction f) {

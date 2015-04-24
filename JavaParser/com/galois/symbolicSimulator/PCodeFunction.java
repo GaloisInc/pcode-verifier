@@ -9,7 +9,7 @@ public class PCodeFunction {
 	public PCodeScope scope;
 	public Varnode macroEntryPoint;
 	public int length;
-        public List<Varnode> basicBlocks = new LinkedList<Varnode>();
+        public List<PCodeBasicBlock> basicBlocks = new LinkedList<PCodeBasicBlock>();
 	
 	public String toString(PCodeMachineState m) {
 		String ret = name + ":\n";

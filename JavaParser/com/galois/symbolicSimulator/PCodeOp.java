@@ -45,7 +45,6 @@ public class PCodeOp {
 			case BRANCH:
 			case BRANCHIND:
 			case RETURN:
-			case CBRANCH:
 				return true;
 			default:
 				return false;
