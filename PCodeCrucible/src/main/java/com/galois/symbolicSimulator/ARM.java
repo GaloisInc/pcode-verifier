@@ -1,45 +1,137 @@
 package com.galois.symbolicSimulator;
 
 import java.math.BigInteger;
+import java.util.*;
+
+import com.galois.crucible.*;
+import com.galois.crucible.cfg.*;
 
 // === Here are a bunch of definitions relevant to the ARM ABI ===
 public class ARM extends ABI {
+    static final int addrWidth = 32;
+    static final int addrBytes = 4;
+    static final long regFileSize = 0x200l;
+
+    PCodeArchSpec arch;
+
+    Map<String, AddrSpaceManager> addrSpaces;
+    ConstAddrSpace consts;
+    RegisterAddrSpace regs;
+    TempAddrSpace temps;
+    RAMAddrSpace ram;
+
+    public ARM( PCodeArchSpec arch )
+    {
+        this.arch = arch;
+        int byteWidth = arch.wordSize;
+        if( byteWidth * 8 != addrWidth ) {
+            throw new IllegalArgumentException( "PCode program has incorrect word width for this ABI" );
+        }
+    }
+
+    public int getAddrBytes() { return addrBytes; }
+
+    public String mangle( String symbol )
+    {
+        return symbol;
+    }
+
+    // TODO: actuall implement this correctly!
+    public void setupCallFrame( MachineState state,
+                                SimulatorValue returnAddr,
+                                SimulatorValue args[] )
+        throws Exception
+    {
+        for( int i=0; i<args.length; i++ ) {
+            state.writeReg( argumentRegister(i), addrBytes, args[i] );
+        }
+
+        state.writeReg( LR, addrBytes, returnAddr );
+    }
+
+    public void push( MachineState state, int bytes, SimulatorValue val )
+        throws Exception
+    {
+        SimulatorValue stk = state.readReg( SP, addrBytes );
+        stk = state.sim.bvSub( stk, state.sim.bvLiteral( addrWidth, bytes ) );
+        state.writeReg( SP, addrBytes, stk );
+        state.poke( stk, addrBytes, val );
+    }
+
+    public SimulatorValue pop( MachineState state, int bytes )
+        throws Exception
+    {
+        SimulatorValue stk = state.readReg( SP, addrBytes );
+        SimulatorValue x = state.peek( stk, bytes );
+        stk = state.sim.bvAdd( stk, state.sim.bvLiteral( addrWidth, bytes ) );
+        state.writeReg( SP, addrBytes, stk );
+        return x;
+    }
+
+    // TODO: actuall implement this correctly!
+    public SimulatorValue extractCallReturns( MachineState state )
+        throws Exception
+    {
+        return state.readReg( returnRegister(0), addrBytes );
+    }
+
+    public Map<String, AddrSpaceManager> initAddrSpaces( Procedure proc )
+    {
+        addrSpaces = new HashMap<String, AddrSpaceManager>();
+
+        consts = new ConstAddrSpace( arch );
+        regs = new RegisterAddrSpace( arch, proc, regFileSize );
+        temps = new TempAddrSpace( arch, proc );
+        ram = new RAMAddrSpace( arch, proc, addrWidth, addrSpaces );
+
+        addrSpaces.put("const"     , consts );
+        addrSpaces.put("register"  , regs );
+        addrSpaces.put("unique"    , temps );
+        addrSpaces.put("ram"       , ram );
+
+        return addrSpaces;
+    }
+
+    public TempAddrSpace getTemps() { return temps; }
+    public RAMAddrSpace getRAM() { return ram; }
+    public RegisterAddrSpace getRegisters() { return regs; }
+
     public BigInteger argumentRegister( int i )
     {
-	switch( i  ) {
-	case 0:
-	    return r0;
-	case 1:
-	    return r1;
-	case 2:
-	    return r2;
-	case 3:
-	    return r3;
-	}
+        switch( i  ) {
+        case 0:
+            return r0;
+        case 1:
+            return r1;
+        case 2:
+            return r2;
+        case 3:
+            return r3;
+        }
 
-	return null;
+        return null;
     }
 
     public BigInteger returnRegister( int i )
     {
-	switch( i  ) {
-	case 0:
-	    return r0;
-	case 1:
-	    return r1;
-	}
+        switch( i  ) {
+        case 0:
+            return r0;
+        case 1:
+            return r1;
+        }
 
-	return null;
+        return null;
     }
 
     public BigInteger stackRegister()
     {
-	return SP;
+        return SP;
     }
 
     public BigInteger frameRegister()
     {
-	return null;
+        return null;
     }
 
     static final BigInteger r0  = BigInteger.valueOf( 0x20l );

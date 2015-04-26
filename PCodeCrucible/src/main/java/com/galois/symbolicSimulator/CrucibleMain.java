@@ -20,9 +20,6 @@ class CrucibleMain {
 
         PCodeParser parser = new PCodeParser( pcodeFilePath, System.err );
         PCodeProgram prog = parser.parseProgram();
-        PCodeArchSpec arch = prog.archSpec;
-        int byteWidth = arch.wordSize;
-        long addrWidth = byteWidth * PCodeCrucible.cellWidth;
 
         // Connect to the crucible server
         Simulator sim = Simulator.launchLocal(crucibleServerPath);
@@ -42,121 +39,68 @@ class CrucibleMain {
                     }
                 });
 
-            // Set up the translator
-            PCodeCrucible translator = new PCodeCrucible( sim, prog );
+            ABI abi = new X86_64( prog.archSpec );
+            //ABI abi = new ARM( prog.archSpec );
+            long addrWidth = abi.getAddrWidth();
 
-            // Initialize the CFG
-            Procedure proc = translator.initProc( "pcodeCFG" );
+            // Set up the translator and build the Crucible CFG
+            PCodeTranslator translator = new PCodeTranslator( sim, prog, abi, "pcodeCFG" );
+            Procedure proc = translator.getProc();
+            MachineState machine = new MachineState( sim, proc, prog, abi );
 
-            // Build the address spaces according to the PCode examples we have seen
-            Map<String, AddrSpaceManager> addrSpaces = new HashMap<String, AddrSpaceManager>();
+            // Some place in memory (arbitrary) where we will store some 4-byte integers
+            int how_many = 10;
+            SimulatorValue arg1 = sim.bvLiteral( addrWidth, 0x7000l );
+            SimulatorValue arg2 = sim.bvLiteral( addrWidth, how_many );
 
-	    //ABI abi = new X86_64();
-	    ABI abi = new ARM();
+            // Set up an array of 4-byte integers
+            SimulatorValue baseVal = sim.bvLiteral( 4*PCodeTranslator.cellWidth, 0x100 );
+            for( int i = 0; i < how_many; i++ ) {
+                SimulatorValue off = sim.bvAdd( arg1, sim.bvLiteral( addrWidth, 4*i ) );
+                SimulatorValue val = sim.bvAdd( baseVal, sim.bvLiteral( 4*PCodeTranslator.cellWidth, i ) );
+                machine.poke( off, 4, val );
+            }
 
-            ConstAddrSpace consts = new ConstAddrSpace( arch );
-            RegisterAddrSpace regs = new RegisterAddrSpace( arch, proc, ABI.regFileSize );
-            TempAddrSpace temps = new TempAddrSpace( arch, proc );
-            RAMAddrSpace ram = new RAMAddrSpace( arch, proc, addrWidth, addrSpaces );
+            // Overwrite position 3 with a symbolic 4-byte integer
+            machine.poke( sim.bvAdd( arg1, sim.bvLiteral( addrWidth, 4*3 ) ),
+                          4, sim.freshConstant( VarType.bitvector( 32 ) ) );
 
-            addrSpaces.put("const"     , consts );
-            addrSpaces.put("register"  , regs );
-            addrSpaces.put("unique"    , temps );
-            addrSpaces.put("ram"       , ram );
+            // Overwrite position 8 with 0
+            machine.poke( sim.bvAdd( arg1, sim.bvLiteral( addrWidth, 4*8 ) ),
+                          4, sim.bvLiteral( 32, 0 ) );
 
-            // Translate the PCode program into a Crucible CFG
-            translator.buildCFG( addrSpaces, temps, regs.getRegisterFile(), ram.getRAM() );
+            //SimulatorValue arg1 = machine.getEntryPoint( "doubler1" );
+            //SimulatorValue arg2 = machine.getEntryPoint( "doubler2" );
 
-            // Print the generated CFG for debugging purposes
-            // sim.printCFG(proc);
+            // make the simulator a bit more chatty
+            sim.setVerbosity( 2 );
 
-            // Install the generated CFG into the simulator
-            sim.useCfg(proc);
+            // set up the stack register(s)
+            machine.initStack( BigInteger.valueOf( 0x4000l ) );
 
-            // Start executing at this address (the "first_zero" function in pcode_primitives.o.xml)
-            //SimulatorValue entryPoint = sim.bvLiteral( addrWidth, 0x280l );
-            SimulatorValue entryPoint = sim.bvLiteral( addrWidth, 0x10344l );
+            // Make up some arbitrary return address
+            SimulatorValue retVal = sim.bvLiteral( addrWidth, 0xdeadbeefl );
 
+            // Call a function!
+            SimulatorValue result = machine.callFunction( "first_zero", retVal, arg1, arg2 );
+            SimulatorValue finalpc = machine.currentPC;
 
-            // Address of the bottom of the stack: 0x4000 is arbitrary
-            SimulatorValue bottomOfStack = sim.bvLiteral( addrWidth, 0x4000l );
+            System.out.println( "finalpc: " + finalpc ); // should be retVal
+            System.out.println( "result: " + result );
 
-            // Address to return to, also arbitrary
-            SimulatorValue returnAddr = sim.bvLiteral( addrWidth, 0xdeadbeefl );
-
-            SimulatorValue initreg = regs.initialRegisters( sim );
-            SimulatorValue initram = ram.initialRam( sim, prog.dataSegment );
-
-	    // Some place in memory (arbitrary) where we will store some 4-byte integers
-	    int how_many = 10;
-	    SimulatorValue arg1 = sim.bvLiteral( addrWidth, 0x7000l );
-	    SimulatorValue arg2 = sim.bvLiteral( addrWidth, how_many );
-
-            // store arg1 into %rdi
-	    initreg = regs.storeRegister( sim, initreg, abi.argumentRegister( 0 ), byteWidth, arg1 );
-
-            // store arg2 into %rsi
-            initreg = regs.storeRegister( sim, initreg, abi.argumentRegister( 1 ), byteWidth, arg2 );
-
-            // store start of the stack into %rsp
-            initreg = regs.storeRegister( sim, initreg, abi.stackRegister(), byteWidth, bottomOfStack );
-
-            // store start of the stack into %rbp
-	    if( abi.frameRegister() != null ) {
-		initreg = regs.storeRegister( sim, initreg, abi.frameRegister(), byteWidth, bottomOfStack );
-	    }
-
-            // set the return address on the stack
-            initram = ram.storeRAM( sim, initram, bottomOfStack, byteWidth, returnAddr );
-
-	    SimulatorValue baseVal = sim.bvLiteral( 4*PCodeCrucible.cellWidth, 0x100 );
-	    //SimulatorValue baseVal = sim.freshConstant( VarType.bitvector( 4*PCodeCrucible.cellWidth ));
-
-	    // Set up an array of 4-byte integers
-	    for( int i = 0; i < how_many; i++ ) {
-		SimulatorValue off = sim.bvAdd( arg1, sim.bvLiteral( addrWidth, 4*i ) );
-		SimulatorValue val = sim.bvAdd( baseVal, sim.bvLiteral( 4*PCodeCrucible.cellWidth, i ) );
-		initram = ram.storeRAM( sim, initram, off, 4, val );
-	    }
-
-	    // Overwrite position 3 with a symbolic 4-byte integer
-	    initram = ram.storeRAM( sim, initram,
-				    sim.bvAdd( arg1, sim.bvLiteral( addrWidth, 4*3 ) ),
-				    4, sim.freshConstant( VarType.bitvector( 32 ) ) );
-
-	    // Overwrite position 8 with 0
-	    initram = ram.storeRAM( sim, initram,
-				    sim.bvAdd( arg1, sim.bvLiteral( addrWidth, 4*8 ) ),
-				    4, sim.bvLiteral( 32, 0 ) );
-
-            // make the simulator a lot more chatty
-            //sim.setVerbosity( 5 );
-
-            // Call the simulator!
-            SimulatorValue v = sim.runCall( proc.getHandle(), entryPoint, initreg, initram );
-
-            SimulatorValue finalpc  = sim.structGet( 0, v );
-            SimulatorValue finalreg = sim.structGet( 1, v );
-            SimulatorValue finalram = sim.structGet( 2, v );
-
-            // Load the function return from %rax
-            SimulatorValue result = regs.loadRegister( sim, finalreg, abi.returnRegister( 0 ), byteWidth );
-
-            System.out.println( "finalpc: " + finalpc );
-	    System.out.println( "result: " + result );
-
-	    // Try to prove something about the result: that it must return either 3 or 8
+            // Try to prove something about the result: that it must return either 3 or 8
             SimulatorValue q = sim.or( sim.eq( result, sim.bvLiteral( addrWidth, 3 ) ),
-				       sim.eq( result, sim.bvLiteral( addrWidth, 8 ) ) );
+                                       sim.eq( result, sim.bvLiteral( addrWidth, 8 ) ) );
 
-	    // Negate in hopes to get UNSAT
-	    q = sim.not(q);
+            // Negate in hopes to get UNSAT
+            q = sim.not(q);
 
-	    // Yea!
-	    System.out.println( "ABC sat answer: " + sim.checkSatWithAbc( q ) );
+            // Yea!
+            System.out.println( "ABC sat answer: " + sim.checkSatWithAbc( q ) );
 
-	    // Also write out an SMTLib2 version of the problem
+            // Also write out an SMTLib2 version of the problem
             sim.writeSmtlib2( "asdf.smt2", q );
+
         } finally {
             sim.close();
         }

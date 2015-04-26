@@ -7,9 +7,12 @@ import java.util.function.Consumer;
 import com.galois.crucible.*;
 import com.galois.crucible.cfg.*;
 
-class PCodeCrucible {
+class PCodeTranslator {
     // how many bits are stored in an individual memory cell
     public static final long cellWidth = 8;
+
+    // Name to assign to the Crucible function representing this PCode program
+    String procName;
 
     // size of this machine's primary word length/address length in bytes
     int byteWidth;
@@ -41,15 +44,43 @@ class PCodeCrucible {
     // The current Crucible basic block
     Block curr_bb;
 
-    public PCodeCrucible( Simulator sim, PCodeProgram prog )
+    // ABI information about our current execution environment
+    ABI abi;
+
+    public PCodeTranslator( Simulator sim, PCodeProgram prog, ABI abi, String procName )
     {
         this.sim = sim;
         this.prog = prog;
-        this.byteWidth = prog.archSpec.wordSize;
-        this.addrWidth = byteWidth * cellWidth;
+        this.abi = abi;
+        this.byteWidth = abi.getAddrBytes();
+        this.addrWidth = abi.getAddrWidth();
+        this.procName = procName;
     }
 
-    public Procedure initProc( String name ) throws Exception {
+    public Procedure getProc() throws Exception
+    {
+        if( proc == null ) {
+
+            initProc( procName );
+
+            Map<String, AddrSpaceManager> addrSpaces = abi.initAddrSpaces( proc );
+            TempAddrSpace temps = abi.getTemps();
+            RegisterAddrSpace regs = abi.getRegisters();
+            RAMAddrSpace ram = abi.getRAM();
+
+            // Translate the PCode program into a Crucible CFG
+            buildCFG( addrSpaces,
+                      temps,
+                      regs.getRegisterFile(),
+                      ram.getRAM() );
+
+            sim.useCfg( proc );
+        }
+
+        return this.proc;
+    }
+
+    void initProc( String name ) throws Exception {
         Type regFileType = Type.vector( Type.bitvector(cellWidth) );
         Type ramType     = Type.wordMap( addrWidth, Type.bitvector(cellWidth) );
 
@@ -61,17 +92,16 @@ class PCodeCrucible {
         Type retType = Type.struct( types );
 
         proc = new Procedure( sim, name, types, retType );
-        return proc;
     }
 
-    public void buildCFG( Map<String,AddrSpaceManager> addrSpaces,
-                          TempAddrSpace temps,
-                          Reg registerFile,
-                          Reg ramReg ) throws Exception {
+    void buildCFG( Map<String,AddrSpaceManager> addrSpaces,
+                   TempAddrSpace temps,
+                   Reg registerFile,
+                   Reg ramReg ) throws Exception {
 
         this.addrSpaces   = addrSpaces;
         this.trampoline   = proc.newBlock();
-	this.trampoline.block_description = "trampoline block";
+        this.trampoline.block_description = "trampoline block";
         this.trampolinePC = proc.newReg( Type.bitvector( addrWidth ) );
         this.blockMap     = new HashMap<BigInteger, Block>();
 
@@ -119,7 +149,7 @@ class PCodeCrucible {
 
         bb.jump( trampoline );
 
-	constructTrampoline( registerFile, ramReg );
+        constructTrampoline( registerFile, ramReg );
     }
 
     void constructTrampoline( Reg registerFile, Reg ramReg ) throws Exception
@@ -129,7 +159,7 @@ class PCodeCrucible {
         for( BigInteger off : blockMap.keySet() ) {
 
             Block next = proc.newBlock();
-	    next.block_description = "mid-trampoline block";
+            next.block_description = "mid-trampoline block";
             Block tgt = blockMap.get(off);
             Expr e = bb.bvEq( bb.read(trampolinePC), bb.bvLiteral( addrWidth, off )) ;
 
@@ -152,7 +182,7 @@ class PCodeCrucible {
         Block bb = blockMap.get( offset );
         if( bb == null ) {
             bb = proc.newBlock();
-	    bb.block_description = "PCode Block: " + offset.toString( 16 );
+            bb.block_description = "PCode Block: " + offset.toString( 16 );
             blockMap.put( offset, bb );
         }
         return bb;
@@ -161,23 +191,23 @@ class PCodeCrucible {
     void visitPCodeBlock( PCodeFunction fn, PCodeBasicBlock pcode_bb )  throws Exception {
 
         curr_bb = fetchBB( pcode_bb.blockBegin.offset );
-        System.out.println("Building basic block " + fn.name + " " + pcode_bb.blockBegin.offset.toString(16) +
-			   " " + pcode_bb.blockEnd.offset.toString(16) +
-			   " " + curr_bb.toString() );
+        //System.out.println("Building basic block " + fn.name + " " + pcode_bb.blockBegin.offset.toString(16) +
+        //" " + pcode_bb.blockEnd.offset.toString(16) +
+        //" " + curr_bb.toString() );
 
         BigInteger macroPC = pcode_bb.blockBegin.offset;
         int microPC = prog.codeSegment.microAddrOfVarnode(pcode_bb.blockBegin);
 
         int fnstart = prog.codeSegment.microAddrOfVarnode(fn.macroEntryPoint);
         int fnend   = fnstart + fn.length;
-        System.out.println( "fn bounds: " + fnstart + " " + microPC + " " + fnend );
+        //System.out.println( "fn bounds: " + fnstart + " " + microPC + " " + fnend );
 
         PCodeOp o = prog.codeSegment.fetch(microPC);
 
         if( !o.blockStart ) {
             throw new Exception( "Invalid start of basic block: " + pcode_bb.blockBegin.offset.toString(16) );
         } else {
-            System.out.println("START OF BLOCK");
+            //System.out.println("START OF BLOCK");
         }
 
         while( o != null && o.offset.compareTo( pcode_bb.blockEnd.offset ) <= 0 ) {
@@ -192,7 +222,7 @@ class PCodeCrucible {
             o = prog.codeSegment.fetch(microPC);
 
             // Create a new crucible basic block if we are at a new offset and
-	    // end the current basic block by jumping
+            // end the current basic block by jumping
             if( !o.offset.equals( macroPC ) ) {
                 Block bb = fetchBB( o.offset );
                 if( curr_bb != null ) {
@@ -204,9 +234,9 @@ class PCodeCrucible {
             }
         }
 
-        if( curr_bb != null ) {
-            System.out.println("Possible unterminated block! " + macroPC.toString(16) );
-        }
+        // if( curr_bb != null ) {
+        //     System.out.println("Possible unterminated block! " + macroPC.toString(16) );
+        // }
     }
 
 
@@ -230,7 +260,7 @@ class PCodeCrucible {
 
     void addOpToBlock( PCodeOp o, int microPC ) throws Exception
     {
-        System.out.println( o.toString() );
+        //System.out.println( o.toString() );
 
         Block bb = curr_bb;
         Expr e, e1, e2;
@@ -263,24 +293,24 @@ class PCodeCrucible {
             Block tgt = fetchBB( o.input0.offset );
             PCodeOp nextop = prog.codeSegment.fetch(microPC + 1);
 
-	    // A CBRANCH may occur in the middle of a block of micro-instructions.
-	    // In this case, we need to create a new Crucible basic block to represent
-	    // the microinstrutions occuring following the CBRANCH.
-	    //
-	    // However, if the memory offset of the following microinstruction is _different_
-	    // from our current offset, then the CBRANCH is the final microinstruction of
-	    // at that offset, and we instead need to fetch the block corresponding to the offset
-	    // of the following instruction.
-	    if( nextop.offset.equals( o.offset ) ) {
-		Block next = proc.newBlock();
-		next.block_description = "PCode internal block " + nextop.offset.toString( 16 ) + " " + nextop.uniq;
-		curr_bb.branch( e, tgt, next );
-		curr_bb = next;
-	    } else {
-		Block next = fetchBB( nextop.offset );
-		curr_bb.branch( e, tgt, next );
-		curr_bb = null;
-	    }
+            // A CBRANCH may occur in the middle of a block of micro-instructions.
+            // In this case, we need to create a new Crucible basic block to represent
+            // the microinstrutions occuring following the CBRANCH.
+            //
+            // However, if the memory offset of the following microinstruction is _different_
+            // from our current offset, then the CBRANCH is the final microinstruction of
+            // at that offset, and we instead need to fetch the block corresponding to the offset
+            // of the following instruction.
+            if( nextop.offset.equals( o.offset ) ) {
+                Block next = proc.newBlock();
+                next.block_description = "PCode internal block " + nextop.offset.toString( 16 ) + " " + nextop.uniq;
+                curr_bb.branch( e, tgt, next );
+                curr_bb = next;
+            } else {
+                Block next = fetchBB( nextop.offset );
+                curr_bb.branch( e, tgt, next );
+                curr_bb = null;
+            }
 
             break;
         }
