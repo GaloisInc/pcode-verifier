@@ -41,6 +41,19 @@ class MachineState {
         currentRam  = ram.initialRam( sim, prog.dataSegment );
     }
 
+    public ABI getABI()
+    {
+        return abi;
+    }
+
+    public SimulatorValue makeWord( BigInteger val ) {
+        return sim.bvLiteral( addrWidth, val );
+    }
+
+    public SimulatorValue makeWord( long val ) {
+        return makeWord( BigInteger.valueOf( val ) );
+    }
+
     public SimulatorValue getEntryPoint( String symbol )
     {
         String mangled = abi.mangle( symbol );
