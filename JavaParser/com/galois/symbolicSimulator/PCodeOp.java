@@ -14,6 +14,7 @@ public class PCodeOp {
 	boolean blockStart = false;
 	boolean funcStart = false; // if this is the first op in a fn
 	PCodeFunction function = null;
+        public LocationData loc;
 	
 	public PCodeOp(PCodeOpCode code, Varnode o, Varnode i0, Varnode i1) {
 		opcode = code;

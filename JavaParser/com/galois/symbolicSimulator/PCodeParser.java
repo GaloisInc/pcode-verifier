@@ -8,8 +8,11 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Scanner;
 
-import javax.xml.parsers.DocumentBuilder;
-import javax.xml.parsers.DocumentBuilderFactory;
+import javax.xml.parsers.*;
+import javax.xml.transform.*;
+import javax.xml.transform.sax.*;
+import javax.xml.transform.dom.*;
+import org.xml.sax.*;
 
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
@@ -30,27 +33,78 @@ public class PCodeParser {
 	Node programNode;
 	List<Node> functionNodes;
 	List<Node> spaceNodes;
-	DocumentBuilderFactory dbf;
-	DocumentBuilder db;
+
 	Document doc;
 	Element root;
 	NodeList topNodes;
 
 	PCodeProgram program;
 	PrintStream out;
-	
+
+    void getDoc(String file)
+	throws Exception
+    {
+	// Here we do a bunch of dumb stuff to make sure our XML parser
+	// keeps track of source line and column numbers and attaches
+	// them to the generated DOM nodes.
+
+	DocumentBuilderFactory dbf = DocumentBuilderFactory.newInstance();
+	TransformerFactory transformerFactory = TransformerFactory.newInstance();
+	Transformer nullTransformer = transformerFactory.newTransformer();
+	DocumentBuilder db = dbf.newDocumentBuilder();
+
+	doc = db.newDocument();
+	DOMResult domResult = new DOMResult(doc);
+
+	SAXParserFactory saxFactory = SAXParserFactory.newInstance();
+	SAXParser sax = saxFactory.newSAXParser();
+	XMLReader xmlReader = sax.getXMLReader();
+
+	LocationAnnotator locAnn = new LocationAnnotator( xmlReader, doc );
+
+	InputSource input = new InputSource( file );
+	SAXSource saxSource = new SAXSource( locAnn, input );
+
+	nullTransformer.transform( saxSource, domResult );
+
+	doc.getDocumentElement().normalize();
+	root = doc.getDocumentElement();
+	topNodes = root.getChildNodes();
+    }
+
+    void getDoc2(String file)
+	throws Exception
+    {
+	// Simpler way to parse that doesn't track line/column numbers
+
+	DocumentBuilderFactory dbf;
+	DocumentBuilder db;
+
+	dbf = DocumentBuilderFactory.newInstance();
+	db = dbf.newDocumentBuilder();
+	doc = db.parse(file);
+	doc.getDocumentElement().normalize();
+	root = doc.getDocumentElement();
+	topNodes = root.getChildNodes();
+    }
+
+    LocationData getLoc( Node n ) {
+	LocationData loc = null;
+	Object o = n.getUserData(LocationData.LOCATION_DATA_KEY);
+	if( o != null ) {
+	    loc = (LocationData) o;
+	}
+	return loc;
+    }
+
+
 	public PCodeParser(String file, PrintStream o) {
-		try {
-			dbf = DocumentBuilderFactory.newInstance();
-			db = dbf.newDocumentBuilder();
-			doc = db.parse(file);
-			doc.getDocumentElement().normalize();
-			root = doc.getDocumentElement();
-			topNodes = root.getChildNodes();
-			out = o;
-		} catch (Exception e) {
-			e.printStackTrace();
-		}
+	    try {
+		getDoc(file);
+		out = o;
+	    } catch (Exception e) {
+		e.printStackTrace();
+	    }
 	}
 
 	public static void main(String[] args) {
@@ -67,7 +121,7 @@ public class PCodeParser {
 		out.print("> ");
 		while (!done && in.hasNextLine()) {
 			String cmd = in.next();
-			if (cmd.contains("quit")) { 
+			if (cmd.contains("quit")) {
 				done = true;
 				continue;
 			} else if (cmd.contains("run")) {
@@ -93,7 +147,7 @@ public class PCodeParser {
 
 	public PCodeProgram parseProgram(NodeList topElts) {
 		program = new PCodeProgram();
-		
+
 		for (int i = 0; i < topElts.getLength(); i++) {
 			Node n = topElts.item(i);
 			if (!(n instanceof Element)) continue;
@@ -110,13 +164,15 @@ public class PCodeParser {
 			} else if (tag.startsWith("wordSize")) {
 				String wordSize = elt.getAttribute("bits");
 				program.archSpec.wordSize = Integer.parseInt(wordSize)/8;
-			} 
+			}
 		}
 		return program;
 	}
-	
+
 	private PCodeFunction parseFunction(Node n) {
 		PCodeFunction ret = new PCodeFunction();
+		ret.loc = getLoc(n);
+
 		NodeList functionElts = n.getChildNodes();
 		int startPC = program.codeSegment.microIndex;
 		boolean firstBlock = true;
@@ -166,7 +222,7 @@ public class PCodeParser {
 		ret.length = program.codeSegment.microIndex - startPC; // a bit hacky, but what else can we do?
 		return ret;
 	}
-	
+
 	/*
 	 * <op mnemonic="COPY" code="1"><seqnum space="ram" offset="0x0" uniq="0x0"/><addr space="unique" offset="0x1c30" size="8"/><addr space="register" offset="0x28" size="8"/></op>
      * <op mnemonic="INT_SUB" code="20"><seqnum space="ram" offset="0x0" uniq="0x1"/><addr space="register" offset="0x20" size="8"/><addr space="register" offset="0x20" size="8"/><addr space="const" offset="0x8" size="8"/></op>
@@ -174,6 +230,8 @@ public class PCodeParser {
 	private PCodeBasicBlock parseBlock(Element blockElt, boolean firstBlock, PCodeFunction function) {
 		NodeList ops = blockElt.getChildNodes();
 		PCodeBasicBlock block = new PCodeBasicBlock();
+		block.loc = getLoc(blockElt);
+
 		boolean firstOp = true;
 		for (int i = 0; i < ops.getLength(); i++) {
 			Node opNode = ops.item(i);
@@ -213,7 +271,7 @@ public class PCodeParser {
 				} else if (argTag.equals("seqnum")) {
 					uniq = Integer.decode(argE.getAttribute("uniq"));
 					offset = parseBigHex(argE.getAttribute("offset"));
-				} else if (argTag.equals("void")){ 
+				} else if (argTag.equals("void")){
 				        // skip a slot when we encounter the void tag
    				        argi++;
 					continue;
@@ -225,14 +283,15 @@ public class PCodeParser {
 				}
 			}
 		}
-		
+
 		PCodeOp ret = new PCodeOp(PCodeOp.PCodeOpCode.valueOf(opcode),
 					  space_id, args[0], args[1], args[2],
 					  offset, uniq, firstInBlock, firstInFunction, f);
+		ret.loc = getLoc( op );
 
 		return ret;
 	}
-	
+
 	private Varnode parseVarnode(Element argNode) {
 		Varnode ret = new Varnode(program);
 		String offset = argNode.getAttribute("offset");
@@ -258,7 +317,7 @@ public class PCodeParser {
 				AddrValuePair avp = new AddrValuePair(addr, val);
 				addrPairs.add(avp);
 				// if (avp.address > maxAddr) {maxAddr = avp.address;}
-			} 
+			}
 		}
 		// dataSegment.length = maxAddr; // todo later - check if base + offset would be better
 		for (Iterator<AddrValuePair>i = addrPairs.iterator(); i.hasNext();) {

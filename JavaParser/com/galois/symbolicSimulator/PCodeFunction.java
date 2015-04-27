@@ -9,6 +9,8 @@ public class PCodeFunction {
 	public PCodeScope scope;
 	public Varnode macroEntryPoint;
 	public int length;
+        public LocationData loc;
+
         public List<PCodeBasicBlock> basicBlocks = new LinkedList<PCodeBasicBlock>();
 	
 	public String toString(PCodeMachineState m) {
