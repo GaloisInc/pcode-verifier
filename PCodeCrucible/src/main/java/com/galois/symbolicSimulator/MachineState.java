@@ -65,7 +65,7 @@ class MachineState {
         return sim.bvLiteral( addrWidth, fn.macroEntryPoint.offset );
     }
 
-    public SimulatorValue callFunction( String name, SimulatorValue returnAddr, SimulatorValue... args )
+    public SimulatorValue callFunction( SimulatorValue returnAddr, String name, SimulatorValue... args )
         throws Exception
     {
         SimulatorValue entryPoint = getEntryPoint( name );

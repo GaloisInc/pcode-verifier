@@ -42,16 +42,16 @@ class CrucibleMain {
 	    // The SystemV AMD64 ABI
             ABI abi = new X86_64( prog.archSpec );
 
-	    // The ARMv6 (?) ABI
+	    // The ARM ABI
             //ABI abi = new ARM( prog.archSpec );
 
             // Set up the translator and build the Crucible CFG
             PCodeTranslator translator = new PCodeTranslator( sim, prog, abi, "pcodeCFG" );
             MachineState machine = new MachineState( sim, translator.getProc(), prog, abi );
 
-	    //testFirstZero( sim, machine );
-	    //testAES( sim, machine, testKey, testInput0 );
-	    testAES( sim, machine, testKey, testInput1 );
+	    testFirstZero( sim, machine );
+	    //testAES( sim, machine, testKey, testInput0, testOutput0 );
+	    //testAES( sim, machine, testKey, testInput1, testOutput1 );
 
         } finally {
             sim.close();
@@ -79,9 +79,9 @@ Some basic AES test vectors.
     */
 
     public static int[] testKey =
-         { 0x2b, 0x7e, 0x15, 0x16, // 2b7e 1516
-	   0x28, 0xae, 0xd2, 0xa6, // 28ae d2a6
-	   0xab, 0xf7, 0x15, 0x88, // abf7 1588
+         { 0x2b, 0x7e, 0x15, 0x16,   // 2b7e 1516
+	   0x28, 0xae, 0xd2, 0xa6,   // 28ae d2a6
+	   0xab, 0xf7, 0x15, 0x88,   // abf7 1588
 	   0x09, 0xcf, 0x4f, 0x3c }; // 09cf 4f3c
 
     public static int[] testInput0 =
@@ -90,13 +90,29 @@ Some basic AES test vectors.
 	   0xe9, 0x3d, 0x7e, 0x11,   // e93d 7e11
 	   0x73, 0x93, 0x17, 0x2a }; // 7393 172a
 
+    public static int[] testOutput0 =
+         { 0x3a, 0xd7, 0x7b, 0xb4,   // 3ad7 7bb4 
+	   0x0d, 0x7a, 0x36, 0x60,   // 0d7a 3660
+	   0xa8, 0x9e, 0xca, 0xf3,   // a89e caf3
+	   0x24, 0x66, 0xef, 0x97 }; // 2466 ef97
+
     public static int[] testInput1 =
          { 0xae, 0x2d, 0x8a, 0x57,   // ae2d 8a57
 	   0x1e, 0x03, 0xac, 0x9c,   // 1e03 ac9c
 	   0x9e, 0xb7, 0x6f, 0xac,   // 9eb7 6fac
 	   0x45, 0xaf, 0x8e, 0x51 }; // 45af 8e51
 
-    public static void testAES( Simulator sim, MachineState machine, int[] keyBytes, int[] inputBytes )
+    public static int[] testOutput1 =
+         { 0xf5, 0xd3, 0xd5, 0x85,   // f5d3 d585
+	   0x03, 0xb9, 0x69, 0x9d,   // 03b9 699d
+	   0xe7, 0x85, 0x89, 0x5a,   // e785 895a
+	   0x96, 0xfd, 0xba, 0xaf }; // 96fd baaf
+
+    public static void testAES( Simulator sim,
+				MachineState machine,
+				int[] keyBytes,
+				int[] inputBytes,
+				int[] outputBytes )
 	throws Exception
     {
 	SimulatorValue keyAddr    = machine.makeWord( 0x7000l );
@@ -121,17 +137,22 @@ Some basic AES test vectors.
 	machine.initStack( BigInteger.valueOf( 0x4000l ) );
 
 	// Make up some arbitrary return address
-	SimulatorValue retVal = machine.makeWord( 0xdeadbeefl );
+	SimulatorValue retAddr = machine.makeWord( 0xdeadbeefl );
 
 	// Call a function!
-	machine.callFunction( "AES128_ECB_encrypt", retVal, inputAddr, keyAddr, outputAddr );
+	machine.callFunction( retAddr, "AES128_ECB_encrypt", inputAddr, keyAddr, outputAddr );
 
-	System.out.println( "finalpc: " + machine.currentPC ); // should be retVal
+	System.out.println( "finalpc: " + machine.currentPC ); // should be retAddr
 
+	SimulatorValue q = sim.boolLiteral( true );
 	for( int i=0; i<16; i++ ) {
 	    SimulatorValue out = machine.peek( sim.bvAdd( outputAddr, machine.makeWord( i ) ), 1 );
+	    q = sim.and( q, sim.eq( out, sim.bvLiteral( 8, outputBytes[i] ) ) );
 	    System.out.println( out );
 	}
+
+	// Yea!
+	System.out.println( "ABC sat answer: " + sim.checkSatWithAbc( q ) );
     }
 
     public static void testFirstZero( Simulator sim, MachineState machine )
@@ -141,8 +162,8 @@ Some basic AES test vectors.
 
 	// Some place in memory (arbitrary) where we will store some 4-byte integers
 	int how_many = 10;
-	SimulatorValue arg1 = machine.makeWord( 0x7000l );  //sim.bvLiteral( addrWidth, 0x7000l );
-	SimulatorValue arg2 = machine.makeWord( how_many ); //sim.bvLiteral( addrWidth, how_many );
+	SimulatorValue arg1 = machine.makeWord( 0x7000l );
+	SimulatorValue arg2 = machine.makeWord( how_many );
 
 	// Set up an array of 4-byte integers
 	SimulatorValue baseVal = sim.bvLiteral( 4*PCodeTranslator.cellWidth, 0x100 );
@@ -167,12 +188,12 @@ Some basic AES test vectors.
 	machine.initStack( BigInteger.valueOf( 0x4000l ) );
 
 	// Make up some arbitrary return address
-	SimulatorValue retVal = machine.makeWord( 0xdeadbeefl );
+	SimulatorValue retAddr = machine.makeWord( 0xdeadbeefl );
 
 	// Call a function!
-	SimulatorValue result = machine.callFunction( "first_zero", retVal, arg1, arg2 );
+	SimulatorValue result = machine.callFunction( retAddr, "first_zero", arg1, arg2 );
 
-	System.out.println( "finalpc: " + machine.currentPC ); // should be retVal
+	System.out.println( "finalpc: " + machine.currentPC ); // should be retAddr
 	System.out.println( "result: " + result );
 
 	// Try to prove something about the result: that it must return either 3 or 8

@@ -36,7 +36,7 @@ public class ARM extends ABI {
         return symbol;
     }
 
-    // TODO: actuall implement this correctly!
+    // FIXME: actually implement this correctly!
     public void setupCallFrame( MachineState state,
                                 SimulatorValue returnAddr,
                                 SimulatorValue args[] )
@@ -68,7 +68,7 @@ public class ARM extends ABI {
         return x;
     }
 
-    // TODO: actuall implement this correctly!
+    // FIXME: actually implement this correctly!
     public SimulatorValue extractCallReturns( MachineState state )
         throws Exception
     {

@@ -33,12 +33,14 @@ public class X86_64 extends ABI {
 
     public int getAddrBytes() { return addrBytes; }
 
+    // FIXME: Windows and OSX C compilers add leading underscores to "cdecl"
+    // symbols; but other systems do not (apparently).
     public String mangle( String symbol )
     {
         return "_" + symbol;
     }
 
-    // TODO: actuall implement this correctly!
+    // FIXME: actually implement this correctly!
     public void setupCallFrame( MachineState state,
                                 SimulatorValue returnAddr,
                                 SimulatorValue args[] )
@@ -51,7 +53,7 @@ public class X86_64 extends ABI {
         push( state, addrBytes, returnAddr );
     }
 
-    // TODO: actuall implement this correctly!
+    // FIXME: actually implement this correctly!
     public SimulatorValue extractCallReturns( MachineState state )
         throws Exception
     {
