@@ -1,5 +1,6 @@
 <executable>
 <endian isBigEndian="false"/>
+<wordSize bits="64"/>
 <codeBase offset="0x100000db1"/>
 <function_description>
 <function name="_AES128_ECB_encrypt" size="1">
@@ -25,7 +26,9 @@
 <op mnemonic="COPY" code="1"><seqnum space="ram" offset="0x100000db1" uniq="0x0"/><addr space="unique" offset="0x23f0" size="8"/><addr space="register" offset="0x28" size="8"/></op>
 <op mnemonic="INT_SUB" code="20"><seqnum space="ram" offset="0x100000db1" uniq="0x1"/><addr space="register" offset="0x20" size="8"/><addr space="register" offset="0x20" size="8"/><addr space="const" offset="0x8" size="8"/></op>
 <op mnemonic="STORE" code="3"><seqnum space="ram" offset="0x100000db1" uniq="0x2"/><void/><spaceid name="ram"/><addr space="register" offset="0x20" size="8"/><addr space="unique" offset="0x23f0" size="8"/></op>
+
 <op mnemonic="COPY" code="1"><seqnum space="ram" offset="0x100000db2" uniq="0x0"/><addr space="register" offset="0x28" size="8"/><addr space="register" offset="0x20" size="8"/></op>
+
 <op mnemonic="COPY" code="1"><seqnum space="ram" offset="0x100000db5" uniq="0x0"/><addr space="register" offset="0x200" size="1"/><addr space="const" offset="0x0" size="1"/></op>
 <op mnemonic="COPY" code="1"><seqnum space="ram" offset="0x100000db5" uniq="0x1"/><addr space="register" offset="0x20b" size="1"/><addr space="const" offset="0x0" size="1"/></op>
 <op mnemonic="INT_XOR" code="26"><seqnum space="ram" offset="0x100000db5" uniq="0x2"/><addr space="register" offset="0x0" size="4"/><addr space="register" offset="0x0" size="4"/><addr space="register" offset="0x0" size="4"/></op>
@@ -38,30 +41,39 @@
 <op mnemonic="INT_ADD" code="19"><seqnum space="ram" offset="0x100000db7" uniq="0x1"/><addr space="unique" offset="0x670" size="8"/><addr space="register" offset="0x38" size="8"/><addr space="unique" offset="0x650" size="8"/></op>
 <op mnemonic="LOAD" code="2"><seqnum space="ram" offset="0x100000db7" uniq="0x2"/><addr space="unique" offset="0x1e80" size="1"/><spaceid name="ram"/><addr space="unique" offset="0x670" size="8"/></op>
 <op mnemonic="COPY" code="1"><seqnum space="ram" offset="0x100000db7" uniq="0x3"/><addr space="register" offset="0x8" size="1"/><addr space="unique" offset="0x1e80" size="1"/></op>
+
 <op mnemonic="INT_MULT" code="32"><seqnum space="ram" offset="0x100000dba" uniq="0x0"/><addr space="unique" offset="0x650" size="8"/><addr space="register" offset="0x0" size="8"/><addr space="const" offset="0x1" size="8"/></op>
 <op mnemonic="INT_ADD" code="19"><seqnum space="ram" offset="0x100000dba" uniq="0x1"/><addr space="unique" offset="0x670" size="8"/><addr space="register" offset="0x10" size="8"/><addr space="unique" offset="0x650" size="8"/></op>
 <op mnemonic="COPY" code="1"><seqnum space="ram" offset="0x100000dba" uniq="0x2"/><addr space="unique" offset="0x1e80" size="1"/><addr space="register" offset="0x8" size="1"/></op>
 <op mnemonic="STORE" code="3"><seqnum space="ram" offset="0x100000dba" uniq="0x3"/><void/><spaceid name="ram"/><addr space="unique" offset="0x670" size="8"/><addr space="unique" offset="0x1e80" size="1"/></op>
+
 <op mnemonic="INT_SCARRY" code="22"><seqnum space="ram" offset="0x100000dbd" uniq="0x0"/><addr space="register" offset="0x20b" size="1"/><addr space="register" offset="0x0" size="8"/><addr space="const" offset="0x1" size="8"/></op>
 <op mnemonic="INT_ADD" code="19"><seqnum space="ram" offset="0x100000dbd" uniq="0x1"/><addr space="register" offset="0x0" size="8"/><addr space="register" offset="0x0" size="8"/><addr space="const" offset="0x1" size="8"/></op>
 <op mnemonic="INT_SLESS" code="13"><seqnum space="ram" offset="0x100000dbd" uniq="0x2"/><addr space="register" offset="0x207" size="1"/><addr space="register" offset="0x0" size="8"/><addr space="const" offset="0x0" size="8"/></op>
 <op mnemonic="INT_EQUAL" code="11"><seqnum space="ram" offset="0x100000dbd" uniq="0x3"/><addr space="register" offset="0x206" size="1"/><addr space="register" offset="0x0" size="8"/><addr space="const" offset="0x0" size="8"/></op>
+
 <op mnemonic="INT_LESS" code="15"><seqnum space="ram" offset="0x100000dc0" uniq="0x0"/><addr space="register" offset="0x200" size="1"/><addr space="register" offset="0x0" size="8"/><addr space="const" offset="0x10" size="8"/></op>
 <op mnemonic="INT_SBORROW" code="23"><seqnum space="ram" offset="0x100000dc0" uniq="0x1"/><addr space="register" offset="0x20b" size="1"/><addr space="register" offset="0x0" size="8"/><addr space="const" offset="0x10" size="8"/></op>
 <op mnemonic="INT_SUB" code="20"><seqnum space="ram" offset="0x100000dc0" uniq="0x2"/><addr space="unique" offset="0x59d0" size="8"/><addr space="register" offset="0x0" size="8"/><addr space="const" offset="0x10" size="8"/></op>
 <op mnemonic="INT_SLESS" code="13"><seqnum space="ram" offset="0x100000dc0" uniq="0x3"/><addr space="register" offset="0x207" size="1"/><addr space="unique" offset="0x59d0" size="8"/><addr space="const" offset="0x0" size="8"/></op>
 <op mnemonic="INT_EQUAL" code="11"><seqnum space="ram" offset="0x100000dc0" uniq="0x4"/><addr space="register" offset="0x206" size="1"/><addr space="unique" offset="0x59d0" size="8"/><addr space="const" offset="0x0" size="8"/></op>
+
 <op mnemonic="BOOL_NEGATE" code="37"><seqnum space="ram" offset="0x100000dc4" uniq="0x0"/><addr space="unique" offset="0x1ff0" size="1"/><addr space="register" offset="0x206" size="1"/></op>
 <op mnemonic="CBRANCH" code="5"><seqnum space="ram" offset="0x100000dc4" uniq="0x1"/><void/><addr space="ram" offset="0x100000db7" size="8"/><addr space="unique" offset="0x1ff0" size="1"/></op>
+
 </basicblock>
 <basicblock>
 <op mnemonic="COPY" code="1"><seqnum space="ram" offset="0x100000dc6" uniq="0x0"/><addr space="ram" offset="0x100002050" size="8"/><addr space="register" offset="0x10" size="8"/></op>
+
 <op mnemonic="COPY" code="1"><seqnum space="ram" offset="0x100000dcd" uniq="0x0"/><addr space="ram" offset="0x100002058" size="8"/><addr space="register" offset="0x30" size="8"/></op>
+
 <op mnemonic="INT_SUB" code="20"><seqnum space="ram" offset="0x100000dd4" uniq="0x0"/><addr space="register" offset="0x20" size="8"/><addr space="register" offset="0x20" size="8"/><addr space="const" offset="0x8" size="8"/></op>
 <op mnemonic="STORE" code="3"><seqnum space="ram" offset="0x100000dd4" uniq="0x1"/><void/><spaceid name="ram"/><addr space="register" offset="0x20" size="8"/><addr space="const" offset="0x100000dd9" size="8"/></op>
 <op mnemonic="CALL" code="7"><seqnum space="ram" offset="0x100000dd4" uniq="0x2"/><void/><addr space="ram" offset="0x100000ddf" size="8"/></op>
+
 <op mnemonic="LOAD" code="2"><seqnum space="ram" offset="0x100000dd9" uniq="0x0"/><addr space="register" offset="0x28" size="8"/><spaceid name="ram"/><addr space="register" offset="0x20" size="8"/></op>
 <op mnemonic="INT_ADD" code="19"><seqnum space="ram" offset="0x100000dd9" uniq="0x1"/><addr space="register" offset="0x20" size="8"/><addr space="register" offset="0x20" size="8"/><addr space="const" offset="0x8" size="8"/></op>
+
 <op mnemonic="BRANCH" code="4"><seqnum space="ram" offset="0x100000dda" uniq="0x0"/><void/><addr space="ram" offset="0x100000f06" size="8"/></op>
 </basicblock>
 </function_description>
