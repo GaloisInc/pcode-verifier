@@ -74,8 +74,8 @@ class PCodeTranslator {
                       regs.getRegisterFile(),
                       ram.getRAM() );
 
-	    // DEBUGGING
-	    //sim.printCFG( proc );
+            // DEBUGGING
+            //sim.printCFG( proc );
 
             sim.useCfg( proc );
         }
@@ -194,12 +194,12 @@ class PCodeTranslator {
     void visitPCodeBlock( PCodeFunction fn, PCodeBasicBlock pcode_bb )  throws Exception {
 
         curr_bb = fetchBB( pcode_bb.blockBegin.offset );
-	if( pcode_bb.loc != null ) {
-	    Position pos = new SourcePosition( pcode_bb.loc.getSystemId(),
-					       pcode_bb.loc.getStartLine(),
-					       pcode_bb.loc.getStartColumn() );
-	    curr_bb.setPosition( pos );
-	}
+        if( pcode_bb.loc != null ) {
+            Position pos = new SourcePosition( pcode_bb.loc.getSystemId(),
+                                               pcode_bb.loc.getStartLine(),
+                                               pcode_bb.loc.getStartColumn() );
+            curr_bb.setPosition( pos );
+        }
 
         //System.out.println("Building basic block " + fn.name + " " + pcode_bb.blockBegin.offset.toString(16) +
         //" " + pcode_bb.blockEnd.offset.toString(16) +
@@ -224,6 +224,8 @@ class PCodeTranslator {
             addOpToBlock( o, microPC );
 
             microPC++;
+
+            // Have to make a special case to break out if we fall off the end of a function definition
             if( !(microPC < fnend) ) {
                 o = null;
                 break;
@@ -271,17 +273,17 @@ class PCodeTranslator {
     void addOpToBlock( PCodeOp o, int microPC ) throws Exception
     {
         //System.out.println( o.toString() );
-	//System.out.println( o.loc.toString() );
+        //System.out.println( o.loc.toString() );
 
         Block bb = curr_bb;
         Expr e, e1, e2;
 
-	if( o.loc != null ) {
-	    Position pos = new SourcePosition( o.loc.getSystemId(),
-					       o.loc.getStartLine(),
-					       o.loc.getStartColumn() );
-	    bb.setCurrentPosition( pos );
-	}
+        if( o.loc != null ) {
+            Position pos = new SourcePosition( o.loc.getSystemId(),
+                                               o.loc.getStartLine(),
+                                               o.loc.getStartColumn() );
+            bb.setCurrentPosition( pos );
+        }
 
         switch( o.opcode ) {
         case COPY:
