@@ -90,10 +90,10 @@ class MachineState {
     public void initStack( BigInteger bottomOfStack )
         throws Exception
     {
-        SimulatorValue bottomOfStackVal =
-            sim.bvLiteral( addrWidth, bottomOfStack );
+        SimulatorValue bottomOfStackVal = sim.bvLiteral( addrWidth, bottomOfStack );
 
         writeReg( abi.stackRegister(), addrBytes, bottomOfStackVal );
+
         if( abi.frameRegister() != null ) {
             writeReg( abi.frameRegister(), addrBytes, bottomOfStackVal );
         }
