@@ -12,6 +12,9 @@
 
     <properties>
       <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+      <defaultCrucibleHome>${env.HOME}/code/mss/build</defaultCrucibleHome>
+      <crucibleHome>${defaultCrucibleHome}</crucibleHome>
+      <cruciblePath>${crucibleHome}/bin/crucible-server</cruciblePath>
     </properties>
 
     <dependencies>
@@ -84,7 +87,7 @@
 		<mainClass>com.galois.symbolicSimulator.CrucibleMain</mainClass>
 		<id>pcode-crucible</id>
 		<commandLineArguments>
-		  <commandLineArgument>"${HOME}/code/mss/build/bin/crucible-server"</commandLineArgument>
+		  <commandLineArgument>"${cruciblePath}"</commandLineArgument>
 		</commandLineArguments>
 	      </program>
 	    </programs>
