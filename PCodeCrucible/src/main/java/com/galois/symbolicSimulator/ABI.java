@@ -8,12 +8,14 @@ import com.galois.crucible.cfg.*;
 
 // Implementations of some basic ABI stuff
 public abstract class ABI {
-    public static ABI getInstance( String name, PCodeArchSpec arch ) {
-        if( name.equals( "AMD64" ) ) { return new X86_64( arch ); }
-        if( name.equals( "ARM" )   ) { return new ARM( arch ); }
+    public static ABI getInstance( String name, PCodeArchSpec arch, Simulator sim ) {
+        if( name.equals( "AMD64" ) ) { return new X86_64( arch, sim ); }
+        if( name.equals( "ARM" )   ) { return new ARM( arch, sim ); }
 
         throw new IllegalArgumentException( "Unknown ABI: " + name );
     }
+
+    public abstract Type[] machineStateTypes();
 
     public abstract int getAddrBytes();
     public long getAddrWidth() { return getAddrBytes() * 8; }

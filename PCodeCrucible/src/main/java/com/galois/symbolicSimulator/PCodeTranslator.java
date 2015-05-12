@@ -84,16 +84,8 @@ class PCodeTranslator {
     }
 
     void initProc( String name ) throws Exception {
-        Type regFileType = Type.vector( Type.bitvector(cellWidth) );
-        Type ramType     = Type.wordMap( addrWidth, Type.bitvector(cellWidth) );
-
-        Type[] types = new Type[]
-            { Type.bitvector( addrWidth ),
-              regFileType,
-              ramType
-            };
+        Type[] types = abi.machineStateTypes();
         Type retType = Type.struct( types );
-
         proc = new Procedure( sim, name, types, retType );
     }
 

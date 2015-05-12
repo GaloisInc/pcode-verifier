@@ -13,23 +13,30 @@ public final class RAMAddrSpace extends AddrSpaceManager {
     long addrWidth;
     Type ramType;
     Reg ramReg;
+    Simulator sim;
 
     Map<String, AddrSpaceManager> addrSpaces;
 
 
-    public RAMAddrSpace( PCodeArchSpec arch, Procedure proc, long addrWidth, Map<String, AddrSpaceManager> addrSpaces )
+    public RAMAddrSpace( PCodeArchSpec arch, Procedure proc, long addrWidth, Map<String, AddrSpaceManager> addrSpaces, Simulator sim )
     {
         super(arch);
         this.proc = proc;
         this.addrWidth = addrWidth;
         this.addrSpaces = addrSpaces;
-        ramType = Type.wordMap( addrWidth, Type.bitvector(cellSize) );
+        this.sim = sim;
+        ramType = getRAMType( addrWidth );
         ramReg = proc.newReg( ramType );
     }
 
     public Reg getRAM()
     {
         return ramReg;
+    }
+
+    public static Type getRAMType( long addrWidth )
+    {
+        return Type.wordMap( addrWidth, Type.bitvector(cellSize) );
     }
 
     public <T extends Typed> T initialRam( ValueCreator<T> vc )
@@ -60,6 +67,10 @@ public final class RAMAddrSpace extends AddrSpaceManager {
         return ram;
     }
 
+
+    Map<Integer, FunctionHandle> storeMap = new HashMap<Integer,FunctionHandle>();
+    Map<Integer, FunctionHandle> loadMap = new HashMap<Integer,FunctionHandle>();
+
     public <T extends Typed>
         T storeRAM( ValueCreator<T> vc, T ram, T offset, int size, T e )
         throws Exception {
@@ -69,15 +80,18 @@ public final class RAMAddrSpace extends AddrSpaceManager {
         }
         if( size == 0 ) { return ram; }
 
-        // Enumerate from MSB first (at i = 0) to LSB (at i = size - 1)
-        int i = 0;
-        for( BigInteger idx : indexEnumerator( BigInteger.ZERO, size ) ) {
-            T er = vc.bvSelect( cellSize * (size - i - 1), cellSize, e );
-            ram = vc.insertWordMap( vc.bvAdd( offset, vc.bvLiteral( addrWidth, idx ) ), er, ram );
-            i++;
+        if( size == 1 ) {
+            return vc.insertWordMap( offset, e, ram );
         }
 
-        return ram;
+        FunctionHandle hdl = storeMap.get( new Integer(size) );
+        if( hdl == null ) {
+            hdl = sim.getMultipartStoreHandle( addrWidth, cellSize, size );
+            storeMap.put( new Integer(size), hdl );
+        }
+
+        T b = vc.boolLiteral( arch.bigEndianP );
+        return vc.callHandle( hdl, b, offset, e, ram );
     }
 
     public <T extends Typed>
@@ -91,16 +105,18 @@ public final class RAMAddrSpace extends AddrSpaceManager {
             return vc.bvLiteral( 0, BigInteger.ZERO );
         }
 
-        // Some ugly casting stuff here to work around the weakness of Java's generics system
-        T[] bytes = (T[]) new Typed[size];
-
-        // Enumerate from MSB first (at i = 0) to LSB (at i = size - 1)
-        int i = 0;
-        for( BigInteger idx : indexEnumerator( BigInteger.ZERO, size ) ) {
-            bytes[i++] = vc.lookupWordMap( vc.bvAdd( offset, vc.bvLiteral( addrWidth, idx ) ), ram );
+        if( size == 1 ) {
+            return vc.lookupWordMap( offset, ram );
         }
 
-        return vc.bvConcat(bytes);
+        FunctionHandle hdl = loadMap.get( new Integer(size) );
+        if( hdl == null ) {
+            hdl = sim.getMultipartLoadHandle( addrWidth, cellSize, size );
+            loadMap.put( new Integer(size), hdl );
+        }
+
+        T b = vc.boolLiteral( arch.bigEndianP );
+        return vc.callHandle( hdl, b, offset, ram, vc.nothingValue( Type.bitvector(cellSize) ) );
     }
 
     public Expr loadDirect( Block bb, BigInteger offset, int size )

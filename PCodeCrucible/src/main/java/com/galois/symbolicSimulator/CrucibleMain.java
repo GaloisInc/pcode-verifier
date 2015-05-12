@@ -41,7 +41,7 @@ class CrucibleMain {
                 });
 
             // Currently supported ABIs: AMD64 and ARM
-            ABI abi = ABI.getInstance( abiName, prog.archSpec );
+            ABI abi = ABI.getInstance( abiName, prog.archSpec, sim );
 
             // Set up the translator and build the Crucible CFG
             PCodeTranslator translator = new PCodeTranslator( sim, prog, abi, "pcodeCFG" );
@@ -55,7 +55,6 @@ class CrucibleMain {
             sim.close();
         }
     }
-
 
     public static void testFirstZero( Simulator sim, MachineState machine )
         throws Exception

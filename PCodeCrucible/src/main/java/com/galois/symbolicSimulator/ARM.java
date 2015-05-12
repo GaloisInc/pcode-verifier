@@ -10,9 +10,10 @@ import com.galois.crucible.cfg.*;
 public class ARM extends ABI {
     static final int addrWidth = 32;
     static final int addrBytes = 4;
-    static final long regFileSize = 0x200l;
+    static final int regWidth = 8; // number of bits required to address all the registers
 
     PCodeArchSpec arch;
+    Simulator sim;
 
     Map<String, AddrSpaceManager> addrSpaces;
     ConstAddrSpace consts;
@@ -20,9 +21,10 @@ public class ARM extends ABI {
     TempAddrSpace temps;
     RAMAddrSpace ram;
 
-    public ARM( PCodeArchSpec arch )
+    public ARM( PCodeArchSpec arch, Simulator sim )
     {
         this.arch = arch;
+        this.sim = sim;
         int byteWidth = arch.wordSize;
         if( byteWidth * 8 != addrWidth ) {
             throw new IllegalArgumentException( "PCode program has incorrect word width for this ABI" );
@@ -75,14 +77,26 @@ public class ARM extends ABI {
         return state.readReg( returnRegister(0), addrBytes );
     }
 
+    public Type[] machineStateTypes()
+    {
+        Type regFileType = RegisterAddrSpace.getRegisterFileType( regWidth );
+        Type ramType     = RAMAddrSpace.getRAMType( addrWidth );
+        Type[] types = new Type[]
+            { Type.bitvector( addrWidth ),
+              regFileType,
+              ramType
+            };
+        return types;
+    }
+
     public Map<String, AddrSpaceManager> initAddrSpaces( Procedure proc )
     {
         addrSpaces = new HashMap<String, AddrSpaceManager>();
 
         consts = new ConstAddrSpace( arch );
-        regs = new RegisterAddrSpace( arch, proc, regFileSize );
+        regs = new RegisterAddrSpace( arch, proc, regWidth, sim );
         temps = new TempAddrSpace( arch, proc );
-        ram = new RAMAddrSpace( arch, proc, addrWidth, addrSpaces );
+        ram = new RAMAddrSpace( arch, proc, addrWidth, addrSpaces, sim );
 
         addrSpaces.put("const"     , consts );
         addrSpaces.put("register"  , regs );
