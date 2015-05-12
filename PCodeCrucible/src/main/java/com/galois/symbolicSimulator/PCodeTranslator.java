@@ -244,22 +244,22 @@ class PCodeTranslator {
     }
 
 
-    AddrSpaceManager getSpace( Varnode vn ) throws Exception {
-        AddrSpaceManager m = addrSpaces.get( vn.space_name );
+    AddrSpaceManager getSpace( String space_name ) throws Exception {
+        AddrSpaceManager m = addrSpaces.get( space_name );
         if( m == null ) {
-            throw new Exception( "Unknown address space: " + vn.space_name );
+            throw new Exception( "Unknown address space: " + space_name );
         }
         return m;
     }
 
     Expr getInput( Varnode vn ) throws Exception
     {
-        return getSpace( vn ).loadDirect( curr_bb, vn.offset, vn.size );
+        return getSpace( vn.space_name ).loadDirect( curr_bb, vn.offset, vn.size );
     }
 
     void setOutput( PCodeOp o, Expr e ) throws Exception
     {
-        getSpace( o.output ).storeDirect( curr_bb, o.output.offset, o.output.size, e );
+        getSpace( o.output.space_name ).storeDirect( curr_bb, o.output.offset, o.output.size, e );
     }
 
     void addOpToBlock( PCodeOp o, int microPC ) throws Exception
@@ -283,12 +283,12 @@ class PCodeTranslator {
             setOutput( o, e );
             break;
         case LOAD:
-            e = addrSpaces.get( o.space_id ).loadIndirect( curr_bb, o.input0, o.output.size );
+            e = getSpace( o.space_id ).loadIndirect( curr_bb, o.input0, o.output.size );
             setOutput( o, e );
             break;
         case STORE:
             e = getInput( o.input1 );
-            addrSpaces.get( o.space_id ).storeIndirect( curr_bb, o.input0, o.input1.size, e );
+            getSpace( o.space_id ).storeIndirect( curr_bb, o.input0, o.input1.size, e );
             break;
 
         case BRANCH:
@@ -343,6 +343,7 @@ class PCodeTranslator {
             e = bb.bvConcat( e1, e2 );
             setOutput( o, e );
             break;
+
         case SUBPIECE:
             if( !o.input1.space_name.equals( "const" ) ) {
                 throw new UnsupportedOperationException("Second argument to SUBPIECE is required to be constant");
@@ -359,6 +360,7 @@ class PCodeTranslator {
                 setOutput( o, e );
             }
             break;
+
         case INT_EQUAL:
             e1 = getInput( o.input0 );
             e2 = getInput( o.input1 );
