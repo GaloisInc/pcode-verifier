@@ -100,7 +100,7 @@ class PCodeCodeSpace extends PCodeSpace {
 	
 	public PCodeCodeSpace(PCodeArchSpec a, PCodeSpace ram) {
 		super("data_segment", a);
-		microOps = new ArrayList<>(8196);
+		microOps = new ArrayList<PCodeOp>(8196);
 		this.ram = ram;
 	}
 	

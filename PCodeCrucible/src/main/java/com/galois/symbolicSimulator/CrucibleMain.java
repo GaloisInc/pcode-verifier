@@ -2,7 +2,6 @@ package com.galois.symbolicSimulator;
 
 import java.math.BigInteger;
 import java.util.*;
-import java.util.function.Consumer;
 
 import com.galois.crucible.*;
 import com.galois.crucible.cfg.*;
@@ -26,15 +25,15 @@ class CrucibleMain {
         Simulator sim = Simulator.launchLocal(crucibleServerPath);
         try {
             // listen to messages that come in
-            sim.addPrintMessageListener(new Consumer<String>() {
-                    public void accept(String x) {
+            sim.addPrintMessageListener(new MessageConsumer() {
+                    public void acceptMessage(String x) {
                         System.out.print(x);
                         System.out.flush();
                     }
                 });
 
-            sim.addPathAbortedListener(new Consumer<String>() {
-                    public void accept(String x) {
+            sim.addPathAbortedListener(new MessageConsumer() {
+                    public void acceptMessage(String x) {
                         System.out.println("Path aborted: " + x);
                         System.out.flush();
                     }

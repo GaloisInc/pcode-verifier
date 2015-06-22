@@ -307,7 +307,7 @@ public class PCodeParser {
 	public void parseDataSegment(Node ds, PCodeSpace dataSegment) {
 		NodeList addrBytePairs = ds.getChildNodes();
 		// long maxAddr = 0;
-		ArrayList<AddrValuePair> addrPairs = new ArrayList<>();
+		ArrayList<AddrValuePair> addrPairs = new ArrayList<AddrValuePair>();
 		for (int i = 0; i < addrBytePairs.getLength(); i++) {
 			Node avpNode = addrBytePairs.item(i);
 			if (avpNode instanceof Element) {

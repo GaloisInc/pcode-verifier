@@ -2,7 +2,6 @@ package com.galois.symbolicSimulator;
 
 import java.math.BigInteger;
 import java.util.*;
-import java.util.function.Consumer;
 
 import com.galois.crucible.*;
 import com.galois.crucible.cfg.*;

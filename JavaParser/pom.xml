@@ -35,8 +35,8 @@
           <configuration>
 	    <includes><include>com/galois/**</include></includes>
 	    <excludes><exclude>com/galois/**/Test*</exclude></excludes>
-            <source>1.8</source>
-            <target>1.8</target>
+            <source>1.6</source>
+            <target>1.6</target>
           </configuration>
 	</plugin>
 
