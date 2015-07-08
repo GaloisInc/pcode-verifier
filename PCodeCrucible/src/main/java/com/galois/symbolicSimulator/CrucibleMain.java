@@ -90,7 +90,7 @@ class CrucibleMain {
         SimulatorValue retAddr = machine.makeWord( 0xdeadbeefl );
 
         // Call a function!
-        SimulatorValue result = machine.callFunction( retAddr, "first_zero", arg1, arg2 );
+        SimulatorValue result = machine.callFunction( retAddr, "_first_zero", arg1, arg2 );
 
         System.out.println( "finalpc: " + machine.currentPC ); // should be retAddr
         System.out.println( "result: " + result );

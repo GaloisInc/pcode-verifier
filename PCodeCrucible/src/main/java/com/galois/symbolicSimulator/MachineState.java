@@ -55,8 +55,7 @@ class MachineState {
 
     public SimulatorValue getEntryPoint( String symbol )
     {
-        String mangled = abi.mangle( symbol );
-        PCodeFunction fn = prog.lookupFunction( mangled );
+        PCodeFunction fn = prog.lookupFunction( symbol );
         if( fn == null ) {
             throw new IllegalArgumentException( "Symbol not found: " + symbol );
         }
