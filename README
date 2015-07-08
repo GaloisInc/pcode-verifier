@@ -1,0 +1,38 @@
+This source archive contains all pieces necessary to get started with
+the Crucible symbolic simulator for PCode.
+
+The overall system consists of sevaral pieces:
+  * the main symbolic simulator (named Crucible) that is written in Haskell;
+  * a Java API which binds to a separate Crucible process using Google's
+    protocol buffers;
+  * a Java library for parsing (and concretely executing) PCode XML files;
+  * and a Java library that translates the parsed PCode AST into Crucible
+    programs and provides methods for interacting with the translated program.
+
+The included 'build.sh' script will compile and assemble the various pieces.
+It assumes stack is avalaible to build the Haskell code, and
+uses Maven to build the Java pieces; Google's protocol buffer compiler
+will also need to be installed.  The following configurations are
+expected to work:
+
+* OSX "Yosemite" 10.10.3 or Debian GNU/Linux 3.14.15-2
+* GHC 7.8.3 or GHC 7.10.1
+* stack 0.1.2
+* Java 1.6.0 u45
+* Maven 3.0.5
+* Google Protobuf 2.6.1
+
+Note: the 'protoc' compiler must be in your PATH; or, you may edit
+'mss/crucible-server/java_api/pom.xml' to give the path to protoc explicitly.
+
+NOTE: We have recentely switched to using Stack to build this project.
+Stack is a new build tool for Haskell projects that greatly simplifies
+the building of complicated systems.  Get it at:
+  https://github.com/commercialhaskell/stack/wiki/Downloads
+
+Windows builds may work, but have not been tested at all.
+
+To see a top-level view of how to use the combined pieces, take a look at the
+following Java file that defines the main function for the generated test executable:
+
+pcode-verifier/PCodeCrucible/src/main/java/com/galois/symbolicSimulator/CrucibleMain.java
