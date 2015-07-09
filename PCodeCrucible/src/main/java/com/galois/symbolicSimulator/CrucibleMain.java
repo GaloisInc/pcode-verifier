@@ -110,8 +110,10 @@ class CrucibleMain {
 
         // Also write out an SMTLib2 version of the problem
         sim.writeSmtlib2( "first_zero.smt2", q );
-    }
 
+        // Export an AIGER of the function itself
+        sim.writeAIGER("first_zero.aiger", result );
+    }
 
     /*
 Some basic AES test vectors.
