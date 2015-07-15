@@ -18,7 +18,7 @@
 set -e
 
 # GitHub repos (some private, some public) required by the build
-REPO_LIST="abcBridge aig hpb parameterized-utils mss"
+REPO_LIST="abcBridge aig hpb parameterized-utils mss saw-core"
 
 # base GitHub URL for Galois repos
 GITHUB_URL="git@github.com:GaloisInc"
