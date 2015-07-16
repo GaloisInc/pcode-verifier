@@ -22,7 +22,9 @@ class CrucibleMain {
         PCodeProgram prog = parser.parseProgram();
 
         // Connect to the crucible server
-        Simulator sim = Simulator.launchLocal(crucibleServerPath);
+        //SimpleSimulator sim = SimpleSimulator.launchLocal(crucibleServerPath);
+        SAWSimulator sim = SAWSimulator.launchLocal(crucibleServerPath);
+
         try {
             // listen to messages that come in
             sim.addPrintMessageListener(new MessageConsumer() {
@@ -55,7 +57,7 @@ class CrucibleMain {
         }
     }
 
-    public static void testFirstZero( Simulator sim, MachineState machine )
+    public static void testFirstZero( SAWSimulator sim, MachineState machine )
         throws Exception
     {
         // Some place in memory (arbitrary) where we will store some 4-byte integers
@@ -96,23 +98,27 @@ class CrucibleMain {
         System.out.println( "result: " + result );
 
         // Try to prove something about the result: that it must return either 3 or 8
-        SimulatorValue q = sim.or( sim.eq( result, machine.makeWord( 3 ) ),
-                                   sim.eq( result, machine.makeWord( 8 ) ) );
+        // SimulatorValue q = sim.or( sim.eq( result, machine.makeWord( 3 ) ),
+        //                            sim.eq( result, machine.makeWord( 8 ) ) );
 
-        // Negate in hopes to get UNSAT
-        q = sim.not(q);
+        // // Negate in hopes to get UNSAT
+        // q = sim.not(q);
 
-        // Print the generated query term
-        sim.printTerm( q );
+        // // Print the generated query term
+        // sim.printTerm( q );
 
-        // Try to prove it: expect to get false (i.e., UNSAT)
-        System.out.println( "ABC sat answer: " + sim.checkSatWithAbc( q ) );
+        // // Try to prove it: expect to get false (i.e., UNSAT)
+        // System.out.println( "ABC sat answer: " + sim.checkSatWithAbc( q ) );
 
-        // Also write out an SMTLib2 version of the problem
-        sim.writeSmtlib2( "first_zero.smt2", q );
+        // // Also write out an SMTLib2 version of the problem
+        //sim.writeSmtlib2( "first_zero.smt2", q );
 
         // Export an AIGER of the function itself
-        sim.writeAIGER("first_zero.aiger", result );
+        //sim.writeAIGER("first_zero.aiger", result );
+
+        sim.printTerm( result );
+
+        sim.writeSAW("first_zero.sawext", result );
     }
 
     /*
@@ -147,7 +153,7 @@ Some basic AES test vectors.
            0x73, 0x93, 0x17, 0x2a }; // 7393 172a
 
     public static int[] testOutput0 =
-         { 0x3a, 0xd7, 0x7b, 0xb4,   // 3ad7 7bb4 
+         { 0x3a, 0xd7, 0x7b, 0xb4,   // 3ad7 7bb4
            0x0d, 0x7a, 0x36, 0x60,   // 0d7a 3660
            0xa8, 0x9e, 0xca, 0xf3,   // a89e caf3
            0x24, 0x66, 0xef, 0x97 }; // 2466 ef97
@@ -164,7 +170,7 @@ Some basic AES test vectors.
            0xe7, 0x85, 0x89, 0x5a,   // e785 895a
            0x96, 0xfd, 0xba, 0xaf }; // 96fd baaf
 
-    public static void testAES( Simulator sim,
+    public static void testAES( SimpleSimulator sim,
                                 MachineState machine,
                                 int[] keyBytes,
                                 int[] inputBytes,
