@@ -197,11 +197,10 @@ class PCodeTranslator {
         //" " + curr_bb.toString() );
 
         BigInteger macroPC = pcode_bb.blockBegin.offset;
-        int microPC = prog.codeSegment.microAddrOfVarnode(pcode_bb.blockBegin);
-
-        int fnstart = prog.codeSegment.microAddrOfVarnode(fn.macroEntryPoint);
-        int fnend   = fnstart + fn.length;
-        //System.out.println( "fn bounds: " + fnstart + " " + microPC + " " + fnend );
+        int blockstart = prog.codeSegment.microAddrOfVarnode(pcode_bb.blockBegin);
+        int blockend   = prog.codeSegment.microAddrOfVarnode(pcode_bb.blockEnd);
+        int microPC    = blockstart;
+        // System.out.println( "block bounds: " + blockstart + " " + blockend );
 
         PCodeOp o = prog.codeSegment.fetch(microPC);
 
@@ -211,13 +210,22 @@ class PCodeTranslator {
             //System.out.println("START OF BLOCK");
         }
 
+        // End the loop when we terminate the block via a control-flow instruction (when o == null);
+        // or when we have just added an implict jump to the first instruction of the following
+        // PCode basic block, which happens when the macroinstruction PC is beyond the ending offset.
         while( o != null && o.offset.compareTo( pcode_bb.blockEnd.offset ) <= 0 ) {
+
+            // Translate the fetched instruction and add it to the current block
             addOpToBlock( o, microPC );
 
+            // advance the microcode instruction counter
             microPC++;
 
-            // Have to make a special case to break out if we fall off the end of a function definition
-            if( !(microPC < fnend) ) {
+            // If we fall off the end of the block which was terminated by some control-flow
+            // instruction, we break out early here.  If the block is _not_ already terminated
+            // (i.e. curr_bb != null), then we have to fetch the crucible basic block corresponding
+            // to the following instruction and add a jump; this is done below.
+            if( !(microPC < blockend) && curr_bb == null ) {
                 o = null;
                 break;
             }
@@ -225,7 +233,7 @@ class PCodeTranslator {
             o = prog.codeSegment.fetch(microPC);
 
             // Create a new crucible basic block if we are at a new offset and
-            // end the current basic block by jumping
+            // end the current basic block by jumping.
             if( !o.offset.equals( macroPC ) ) {
                 Block bb = fetchBB( o.offset );
                 if( curr_bb != null ) {
