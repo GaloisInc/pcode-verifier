@@ -48,13 +48,31 @@ class CrucibleMain {
             PCodeTranslator translator = new PCodeTranslator( sim, prog, abi, "pcodeCFG" );
             MachineState machine = new MachineState( sim, translator.getProc(), prog, abi );
 
-            testFirstZero( sim, machine );
+            testLFSR( sim, machine );
+            //testFirstZero( sim, machine );
             //testAES( sim, machine, testKey, testInput0, testOutput0 );
             //testAES( sim, machine, testKey, testInput1, testOutput1 );
 
         } finally {
             sim.close();
         }
+    }
+
+    public static void testLFSR( SAWSimulator sim, MachineState machine )
+        throws Exception
+    {
+        SimulatorValue retAddr = machine.makeWord( 0xdeadbeefl );
+
+        SimulatorValue arg = sim.bvZext( sim.freshConstant( VarType.bitvector( 16 )), 64 );
+
+        // Call a function!
+        SimulatorValue result = machine.callFunction( retAddr, "_lfsr_word32_seed", arg );
+
+        System.out.println( "finalpc: " + machine.currentPC ); // should be retAddr
+        System.out.println( "result: " + result );
+
+        //sim.writeAIGER("lfsr.aiger", sim.bvTrunc( result, 32 ) );
+        sim.writeSAW("lfsr.sawext", sim.bvTrunc( result, 32 ));
     }
 
     public static void testFirstZero( SAWSimulator sim, MachineState machine )
@@ -116,7 +134,7 @@ class CrucibleMain {
         // Export an AIGER of the function itself
         //sim.writeAIGER("first_zero.aiger", result );
 
-        sim.printTerm( result );
+        //sim.printTerm( result );
 
         sim.writeSAW("first_zero.sawext", result );
     }
