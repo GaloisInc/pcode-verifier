@@ -248,6 +248,11 @@ public class PCodeParser {
 				}
 			}
 		}
+
+		if( block.blockBegin == null ) {
+		    throw new Error("Empty basic block at " + block.loc.toString());
+		}
+
 		return block;
 	}
 
