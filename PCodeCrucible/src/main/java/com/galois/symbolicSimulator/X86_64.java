@@ -122,14 +122,12 @@ public class X86_64 extends ABI {
             return rsi;
         case 2:
             return rdx;
-            /* I don't acutally know where these registers live...
         case 3:
             return rcx;
         case 4:
             return r8;
         case 5:
             return r9;
-            */
         }
 
         return null;
@@ -158,27 +156,22 @@ public class X86_64 extends ABI {
     }
 
     static final BigInteger rax = BigInteger.valueOf( 0x00l ); // offset value for %rax
+    static final BigInteger rcx = BigInteger.valueOf( 0x08l ); // offset value for %rcx
+    static final BigInteger rdx = BigInteger.valueOf( 0x10l ); // offset value for %rdx
+    static final BigInteger rbx = BigInteger.valueOf( 0x18l ); // offset value for %rbx
     static final BigInteger rsp = BigInteger.valueOf( 0x20l ); // offset value for %rsp
     static final BigInteger rbp = BigInteger.valueOf( 0x28l ); // offset value for %rbp
     static final BigInteger rsi = BigInteger.valueOf( 0x30l ); // offset value for %rsi
     static final BigInteger rdi = BigInteger.valueOf( 0x38l ); // offset value for %rdi
 
-    // Hard to be sure, but I think this is where %rdx lives
-    static final BigInteger rdx = BigInteger.valueOf( 0x10l ); // offset value for %rdx
-
-    // ugh, no real idea
-    //static final BigInteger rbx = BigInteger.valueOf( ??? );
-    //static final BigInteger rcx = BigInteger.valueOf( ??? );
-
-    // maybe these are right?
-    static final BigInteger r8  = BigInteger.valueOf( 0x40l );
-    static final BigInteger r9  = BigInteger.valueOf( 0x48l );
-    static final BigInteger r10 = BigInteger.valueOf( 0x50l );
-    static final BigInteger r11 = BigInteger.valueOf( 0x58l );
-    static final BigInteger r12 = BigInteger.valueOf( 0x60l );
-    static final BigInteger r13 = BigInteger.valueOf( 0x68l );
-    static final BigInteger r14 = BigInteger.valueOf( 0x70l );
-    static final BigInteger r15 = BigInteger.valueOf( 0x78l );
+    static final BigInteger r8  = BigInteger.valueOf( 0x80l );
+    static final BigInteger r9  = BigInteger.valueOf( 0x88l );
+    static final BigInteger r10 = BigInteger.valueOf( 0x90l );
+    static final BigInteger r11 = BigInteger.valueOf( 0x98l );
+    static final BigInteger r12 = BigInteger.valueOf( 0xa0l );
+    static final BigInteger r13 = BigInteger.valueOf( 0xa8l );
+    static final BigInteger r14 = BigInteger.valueOf( 0xb0l );
+    static final BigInteger r15 = BigInteger.valueOf( 0xb8l );
 
     // There's a big ol' gap here.  Probably for floating-point
     // registers.  x87 and SSE2 registers will fit in this space,
