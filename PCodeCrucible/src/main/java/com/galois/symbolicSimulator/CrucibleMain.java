@@ -22,20 +22,20 @@ class CrucibleMain {
         PCodeProgram prog = parser.parseProgram();
 
         // Connect to the crucible server
-        //SimpleSimulator sim = SimpleSimulator.launchLocal(crucibleServerPath);
-        SAWSimulator sim = SAWSimulator.launchLocal(crucibleServerPath);
+        SimpleSimulator sim = SimpleSimulator.launchLocal(crucibleServerPath);
+        //SAWSimulator sim = SAWSimulator.launchLocal(crucibleServerPath);
 
         try {
             // listen to messages that come in
             sim.addPrintMessageListener(new MessageConsumer() {
-                    public void acceptMessage(String x) {
+                    public void acceptMessage(SimulatorMessage x) {
                         System.out.print(x);
                         System.out.flush();
                     }
                 });
 
             sim.addPathAbortedListener(new MessageConsumer() {
-                    public void acceptMessage(String x) {
+                    public void acceptMessage(SimulatorMessage x) {
                         System.out.println("Path aborted: " + x);
                         System.out.flush();
                     }
@@ -48,11 +48,21 @@ class CrucibleMain {
             PCodeTranslator translator = new PCodeTranslator( sim, prog, abi, "pcodeCFG" );
             MachineState machine = new MachineState( sim, translator.getProc(), prog, abi );
 
-            testLFSR( sim, machine );
-            //testFirstZero( sim, machine );
+            //testLFSR( sim, machine );
+            testFirstZero( sim, machine );
             //testAES( sim, machine, testKey, testInput0, testOutput0 );
             //testAES( sim, machine, testKey, testInput1, testOutput1 );
 
+        } catch (SimulatorFailedException ex) {
+            ex.printStackTrace();
+            List<SimulatorMessage> msgs = ex.getMessages();
+            if( msgs != null && msgs.size() > 0 ) {
+                System.out.println( "== Aborted exection paths (" + msgs.size() + ") ==" );
+                for( SimulatorMessage msg : ex.getMessages() ) {
+                    System.out.println( msg.toString() );
+                }
+                System.out.println( "== End aborted exection paths ==" );
+            }
         } finally {
             sim.close();
         }
@@ -71,11 +81,13 @@ class CrucibleMain {
         System.out.println( "finalpc: " + machine.currentPC ); // should be retAddr
         System.out.println( "result: " + result );
 
+        sim.printTerm( sim.bvTrunc( result, 32 ) );
+
         //sim.writeAIGER("lfsr.aiger", sim.bvTrunc( result, 32 ) );
         sim.writeSAW("lfsr.sawext", sim.bvTrunc( result, 32 ));
     }
 
-    public static void testFirstZero( SAWSimulator sim, MachineState machine )
+    public static void testFirstZero( SimpleSimulator sim, MachineState machine )
         throws Exception
     {
         // Some place in memory (arbitrary) where we will store some 4-byte integers
@@ -116,27 +128,27 @@ class CrucibleMain {
         System.out.println( "result: " + result );
 
         // Try to prove something about the result: that it must return either 3 or 8
-        // SimulatorValue q = sim.or( sim.eq( result, machine.makeWord( 3 ) ),
-        //                            sim.eq( result, machine.makeWord( 8 ) ) );
+        SimulatorValue q = sim.or( sim.eq( result, machine.makeWord( 3 ) ),
+                                   sim.eq( result, machine.makeWord( 8 ) ) );
 
-        // // Negate in hopes to get UNSAT
-        // q = sim.not(q);
+        // Negate in hopes to get UNSAT
+        q = sim.not(q);
 
-        // // Print the generated query term
-        // sim.printTerm( q );
+        // Print the generated query term
+        sim.printTerm( q );
 
-        // // Try to prove it: expect to get false (i.e., UNSAT)
-        // System.out.println( "ABC sat answer: " + sim.checkSatWithAbc( q ) );
+        // Try to prove it: expect to get false (i.e., UNSAT)
+        System.out.println( "ABC sat answer: " + sim.checkSatWithAbc( q ) );
 
         // // Also write out an SMTLib2 version of the problem
         //sim.writeSmtlib2( "first_zero.smt2", q );
 
         // Export an AIGER of the function itself
-        //sim.writeAIGER("first_zero.aiger", result );
+        sim.writeAIGER("first_zero.aiger", result );
 
         //sim.printTerm( result );
 
-        sim.writeSAW("first_zero.sawext", result );
+        //sim.writeSAW("first_zero.sawext", result );
     }
 
     /*
