@@ -46,6 +46,9 @@ class PCodeTranslator {
     // ABI information about our current execution environment
     ABI abi;
 
+    // Path name to use for source positions
+    String loc_path;
+
     public PCodeTranslator( Simulator sim, PCodeProgram prog, ABI abi, String procName )
     {
         this.sim = sim;
@@ -54,6 +57,17 @@ class PCodeTranslator {
         this.byteWidth = abi.getAddrBytes();
         this.addrWidth = abi.getAddrWidth();
         this.procName = procName;
+    }
+
+    public PCodeTranslator( Simulator sim, PCodeProgram prog, ABI abi, String procName, String loc_path )
+    {
+        this.sim = sim;
+        this.prog = prog;
+        this.abi = abi;
+        this.byteWidth = abi.getAddrBytes();
+        this.addrWidth = abi.getAddrWidth();
+        this.procName = procName;
+        this.loc_path = loc_path;
     }
 
     public Procedure getProc() throws Exception
@@ -183,12 +197,17 @@ class PCodeTranslator {
     }
 
     void visitPCodeBlock( PCodeFunction fn, PCodeBasicBlock pcode_bb )  throws Exception {
-
         curr_bb = fetchBB( pcode_bb.blockBegin.offset );
+
+        String path = loc_path;
+
         if( pcode_bb.loc != null ) {
-            Position pos = new SourcePosition( pcode_bb.loc.getSystemId(),
-                                               pcode_bb.loc.getStartLine(),
-                                               pcode_bb.loc.getStartColumn() );
+            if( path == null ) { path = pcode_bb.loc.getSystemId(); }
+            Position pos = new BinaryPosition( path, pcode_bb.blockBegin.offset.longValue() );
+
+            // Position pos = new SourcePosition( pcode_bb.loc.getSystemId(),
+            //                                    pcode_bb.loc.getStartLine(),
+            //                                    pcode_bb.loc.getStartColumn() );
             curr_bb.setPosition( pos );
         }
 
@@ -216,7 +235,7 @@ class PCodeTranslator {
         while( o != null && o.offset.compareTo( pcode_bb.blockEnd.offset ) <= 0 ) {
 
             // Translate the fetched instruction and add it to the current block
-            addOpToBlock( o, microPC );
+            addOpToBlock( path, o, microPC );
 
             // advance the microcode instruction counter
             microPC++;
@@ -244,10 +263,6 @@ class PCodeTranslator {
                 macroPC = o.offset;
             }
         }
-
-        // if( curr_bb != null ) {
-        //     System.out.println("Possible unterminated block! " + macroPC.toString(16) );
-        // }
     }
 
 
@@ -269,7 +284,7 @@ class PCodeTranslator {
         getSpace( o.output.space_name ).storeDirect( curr_bb, o.output.offset, o.output.size, e );
     }
 
-    void addOpToBlock( PCodeOp o, int microPC ) throws Exception
+    void addOpToBlock( String path, PCodeOp o, int microPC ) throws Exception
     {
         //System.out.println( o.toString() );
         //System.out.println( o.loc.toString() );
@@ -278,9 +293,12 @@ class PCodeTranslator {
         Expr e, e1, e2;
 
         if( o.loc != null ) {
-            Position pos = new SourcePosition( o.loc.getSystemId(),
-                                               o.loc.getStartLine(),
-                                               o.loc.getStartColumn() );
+            Position pos = new BinaryPosition( path, o.offset.longValue() );
+
+            // Position pos = new SourcePosition( o.loc.getSystemId(),
+            //                                    o.loc.getStartLine(),
+            //                                    o.loc.getStartColumn() );
+
             bb.setCurrentPosition( pos );
         }
 
