@@ -203,9 +203,10 @@ class PCodeTranslator {
 
         if( pcode_bb.loc != null ) {
             if( path == null ) { path = pcode_bb.loc.getSystemId(); }
-            Position pos = new BinaryPosition( path, pcode_bb.blockBegin.offset.longValue() );
+            Position pos = new BinaryPosition( procName, path, pcode_bb.blockBegin.offset.longValue() );
 
-            // Position pos = new SourcePosition( pcode_bb.loc.getSystemId(),
+            // Position pos = new SourcePosition( procName,
+            //                                    pcode_bb.loc.getSystemId(),
             //                                    pcode_bb.loc.getStartLine(),
             //                                    pcode_bb.loc.getStartColumn() );
             curr_bb.setPosition( pos );
@@ -293,9 +294,10 @@ class PCodeTranslator {
         Expr e, e1, e2;
 
         if( o.loc != null ) {
-            Position pos = new BinaryPosition( path, o.offset.longValue() );
+            Position pos = new BinaryPosition( procName, path, o.offset.longValue() );
 
-            // Position pos = new SourcePosition( o.loc.getSystemId(),
+            // Position pos = new SourcePosition( procName,
+            //                                    o.loc.getSystemId(),
             //                                    o.loc.getStartLine(),
             //                                    o.loc.getStartColumn() );
 
