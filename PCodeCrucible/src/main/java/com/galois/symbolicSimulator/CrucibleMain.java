@@ -22,8 +22,8 @@ class CrucibleMain {
         PCodeProgram prog = parser.parseProgram();
 
         // Connect to the crucible server
-        SimpleSimulator sim = SimpleSimulator.launchLocal(crucibleServerPath);
-        //SAWSimulator sim = SAWSimulator.launchLocal(crucibleServerPath);
+        //SimpleSimulator sim = SimpleSimulator.launchLocal(crucibleServerPath);
+        SAWSimulator sim = SAWSimulator.launchLocal(crucibleServerPath);
 
         try {
             // listen to messages that come in
@@ -87,7 +87,7 @@ class CrucibleMain {
         sim.writeSAW("lfsr.sawext", sim.bvTrunc( result, 32 ));
     }
 
-    public static void testFirstZero( SimpleSimulator sim, MachineState machine )
+    public static void testFirstZero( SAWSimulator sim, MachineState machine )
         throws Exception
     {
         // Some place in memory (arbitrary) where we will store some 4-byte integers
@@ -95,21 +95,24 @@ class CrucibleMain {
         SimulatorValue arg1 = machine.makeWord( 0x7000l );
         SimulatorValue arg2 = machine.makeWord( how_many );
 
+	SimulatorValue vals = sim.freshConstant(VarType.vector( how_many, VarType.bitvector( 32 )));
+
         // Set up an array of 4-byte integers
         SimulatorValue baseVal = sim.bvLiteral( 32, 0x100 );
         for( int i = 0; i < how_many; i++ ) {
             SimulatorValue off = sim.bvAdd( arg1, machine.makeWord( 4*i ) );
-            SimulatorValue val = sim.bvAdd( baseVal, sim.bvLiteral( 32, i ) );
+            //SimulatorValue val = sim.bvAdd( baseVal, sim.bvLiteral( 32, i ) );
+	    SimulatorValue val = sim.vectorGetEntry( vals, sim.natLiteral( i ) );
             machine.poke( off, 4, val );
         }
 
         // Overwrite position 3 with a symbolic 4-byte integer
-        machine.poke( sim.bvAdd( arg1, machine.makeWord( 4*3 ) ),
-                      4, sim.freshConstant( VarType.bitvector( 32 ) ) );
+        // machine.poke( sim.bvAdd( arg1, machine.makeWord( 4*3 ) ),
+        //               4, sim.freshConstant( VarType.bitvector( 32 ) ) );
 
         // Overwrite position 8 with 0
         machine.poke( sim.bvAdd( arg1, machine.makeWord( 4*8 ) ),
-                      4, sim.bvLiteral( 32, 0 ) );
+                       4, sim.bvLiteral( 32, 0 ) );
 
         // make the simulator a bit more chatty
         //sim.setVerbosity( 2 );
@@ -127,28 +130,28 @@ class CrucibleMain {
         System.out.println( "finalpc: " + machine.currentPC ); // should be retAddr
         System.out.println( "result: " + result );
 
-        // Try to prove something about the result: that it must return either 3 or 8
-        SimulatorValue q = sim.or( sim.eq( result, machine.makeWord( 3 ) ),
-                                   sim.eq( result, machine.makeWord( 8 ) ) );
+        // // Try to prove something about the result: that it must return either 3 or 8
+        // SimulatorValue q = sim.or( sim.eq( result, machine.makeWord( 3 ) ),
+        //                            sim.eq( result, machine.makeWord( 8 ) ) );
 
-        // Negate in hopes to get UNSAT
-        q = sim.not(q);
+        // // Negate in hopes to get UNSAT
+        // q = sim.not(q);
 
-        // Print the generated query term
-        sim.printTerm( q );
+        // // Print the generated query term
+        // sim.printTerm( q );
 
-        // Try to prove it: expect to get false (i.e., UNSAT)
-        System.out.println( "ABC sat answer: " + sim.checkSatWithAbc( q ) );
+        // // Try to prove it: expect to get false (i.e., UNSAT)
+        // System.out.println( "ABC sat answer: " + sim.checkSatWithAbc( q ) );
 
-        // // Also write out an SMTLib2 version of the problem
-        //sim.writeSmtlib2( "first_zero.smt2", q );
+        // // // Also write out an SMTLib2 version of the problem
+        // //sim.writeSmtlib2( "first_zero.smt2", q );
 
-        // Export an AIGER of the function itself
-        sim.writeAIGER("first_zero.aiger", result );
+        // // Export an AIGER of the function itself
+        // sim.writeAIGER("first_zero.aiger", result );
 
         //sim.printTerm( result );
 
-        //sim.writeSAW("first_zero.sawext", result );
+        sim.writeSAW("first_zero.sawext", result );
     }
 
     /*
