@@ -145,32 +145,51 @@ class PCodeTranslator {
 
     void finalizeCFG( Reg registerFile, Reg ramReg ) throws Exception
     {
+        // Produce the entry point block, which simply reads the Crucible function
+        // arguments corresponding to the program counder, registers and memory
+        // and places these values in their respective registers.
+        Block bb = proc.getEntryBlock();
+
         Expr pc       = proc.getArg(0);
         Expr initRegs = proc.getArg(1);
         Expr initRam  = proc.getArg(2);
-
-        Block bb = proc.getEntryBlock();
 
         bb.write( trampolinePC, pc );
         bb.write( registerFile, initRegs );
         bb.write( ramReg, initRam );
 
+        // End the entry point block by jumping to the trampoline to start execution
+        // at the given PC value.
         bb.jump( trampoline );
 
+        // Finsh everything up by constructing the trampoline blocks.
         constructTrampoline( registerFile, ramReg );
     }
 
     void constructTrampoline( Reg registerFile, Reg ramReg ) throws Exception
     {
+        // FIXME? Organize the trampoline as a binary search tree instead of a linear
+        // scan so concrete offsets require at most O(log(n)) jumps instead of
+        // O(n).  Downside: the path conditions for symbolic indirect jumps
+        // become more complicated, including O(n) redundant terms involving inequalities
+        // in addition to the O(n) (dis)equalities found at the leaves of the search tree.
+
+        // Start at the head of the trampoline
         Block bb = trampoline;
 
-        for( BigInteger off : blockMap.keySet() ) {
+        // Sort the offsets using a TreeSet so the resulting trampoline code
+        // is easier to debug when looking at the generated CFG.
+        Set<BigInteger> offsets = new TreeSet<BigInteger>( blockMap.keySet() );
 
+        // For each insturction offset in the program, produce a trampoline block
+        // that checks the trampoline register against that offest and jumps to
+        // the corresponding Crucible basic block if they match.
+        for( BigInteger off : offsets ) {
             Block next = proc.newBlock();
             next.block_description = "mid-trampoline block";
+
             Block tgt = blockMap.get(off);
             Expr e = bb.bvEq( bb.read(trampolinePC), bb.bvLiteral( addrWidth, off )) ;
-
             bb.branch( e, tgt, next );
 
             bb = next;
@@ -178,7 +197,8 @@ class PCodeTranslator {
 
         // Default case, when we fall of the end of the trampoline
         // This means we tried to indirect jump to an
-        // unknown address... RETURN!
+        // unknown address. In this case, return from the crucible function
+        // with updated program counter, register bank and memory.
         Expr pc   = bb.read(trampolinePC);
         Expr regs = bb.read(registerFile);
         Expr ram  = bb.read(ramReg);
@@ -242,10 +262,17 @@ class PCodeTranslator {
             microPC++;
 
             // If we fall off the end of the block which was terminated by some control-flow
-            // instruction, we break out early here.  If the block is _not_ already terminated
-            // (i.e. curr_bb != null), then we have to fetch the crucible basic block corresponding
-            // to the following instruction and add a jump; this is done below.
-            if( !(microPC < blockend) && curr_bb == null ) {
+            // instruction, we break out early here. We must exit early here to avoid attempting
+            // to fetch an instruction past the end of the program.  However, if the block is _not_
+            // already terminated (i.e. curr_bb != null), then the following microcode PC must be valid
+            // and we have to fetch the crucible basic block corresponding to the following instruction
+            // and add an explicit jump, as is done below.
+            //
+            // NB: blockend is not necessarily the last microinstruction PC in this basic block! Rather,
+            // it is the microinstruction PC value for the _first_ microinstruction of the last addressable
+            // instruction in the basic block.  Thus !(microPC <= blockend) will hold for _all_ the
+            // microinstrucions of the final instruction of the basic block.
+            if( !(microPC <= blockend) && curr_bb == null ) {
                 o = null;
                 break;
             }
@@ -254,7 +281,7 @@ class PCodeTranslator {
 
             // Create a new crucible basic block if we are at a new offset and
             // end the current basic block by jumping.
-            if( !o.offset.equals( macroPC ) ) {
+            if( o != null && !o.offset.equals( macroPC ) ) {
                 Block bb = fetchBB( o.offset );
                 if( curr_bb != null ) {
                     curr_bb.jump( bb );
@@ -342,7 +369,7 @@ class PCodeTranslator {
             // of the following instruction.
             if( nextop.offset.equals( o.offset ) ) {
                 Block next = proc.newBlock();
-                next.block_description = "PCode internal block " + nextop.offset.toString( 16 ) + " " + nextop.uniq;
+                next.block_description = "PCode internal block 0x" + nextop.offset.toString( 16 ) + " " + nextop.uniq;
                 curr_bb.branch( e, tgt, next );
                 curr_bb = next;
             } else {
