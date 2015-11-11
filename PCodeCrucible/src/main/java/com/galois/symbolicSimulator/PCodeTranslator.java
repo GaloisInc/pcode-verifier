@@ -371,10 +371,14 @@ class PCodeTranslator {
                 Block next = proc.newBlock();
                 next.block_description = "PCode internal block 0x" + nextop.offset.toString( 16 ) + " " + nextop.uniq;
                 curr_bb.branch( e, tgt, next );
+
+                // Indicates we are continuing to translate microinstructions in this instruction
                 curr_bb = next;
             } else {
                 Block next = fetchBB( nextop.offset );
                 curr_bb.branch( e, tgt, next );
+
+                // Indicates we are done with all the microinstructions in this instruction
                 curr_bb = null;
             }
 

@@ -1,0 +1,26 @@
+import "aes.cry";
+
+let {{
+test_key = [ 0x2b, 0x7e, 0x15, 0x16,   // 2b7e 1516
+             0x28, 0xae, 0xd2, 0xa6,   // 28ae d2a6
+             0xab, 0xf7, 0x15, 0x88,   // abf7 1588
+             0x09, 0xcf, 0x4f, 0x3c ]  // 09cf 4f3c
+}};
+
+print "loading pcode SAWCore term";
+tm <- read_core "aes.sawcore";
+
+let {{
+tm2 : [16][8] -> [16][8]
+tm2 x = split (tm x)
+}};
+
+print "bitblasting PCode implementation";
+aig2 <- bitblast {{ tm2 }};
+
+print "bitblasting Cryptol reference implementation";
+aig1 <- bitblast {{ \x -> aesEncrypt(x, join test_key) }};
+
+print "Checking equivalance";
+res <- cec aig1 aig2;
+print res;
