@@ -10,13 +10,8 @@ test_key = [ 0x2b, 0x7e, 0x15, 0x16,   // 2b7e 1516
 print "loading pcode SAWCore term";
 tm <- read_core "aes.sawcore";
 
-let {{
-tm2 : [16][8] -> [16][8]
-tm2 x = split (tm x)
-}};
-
 print "bitblasting PCode implementation";
-aig2 <- bitblast {{ tm2 }};
+aig2 <- bitblast {{ tm }};
 
 print "bitblasting Cryptol reference implementation";
 aig1 <- bitblast {{ \x -> aesEncrypt(x, join test_key) }};
