@@ -348,6 +348,10 @@ class PCodeTranslator {
         case BRANCH:
         case CALL: {
             Block tgt = fetchBB( o.input0.offset );
+
+            // Debugging information
+            // curr_bb.print("Unconditional branch to: " + o.input0.offset.toString(16) + "\n" );
+
             curr_bb.jump(tgt);
             curr_bb = null;
             break;
@@ -389,8 +393,22 @@ class PCodeTranslator {
         case CALLIND:
         case RETURN: {
             e = getInput( o.input0 );
+
+            // write the desired jump address to the PC register
             curr_bb.write( trampolinePC, e );
-            curr_bb.jump( trampoline );
+
+            // Build a short block that prints a warning before jumping to the trampoline
+            Block warn_blk = proc.newBlock();
+            warn_blk.block_description = "PCode symbolic indirect jump warning block 0x" + o.offset.toString( 16 );
+            warn_blk.print( "WARNING: indirect branch on symbolic value at 0x" + o.offset.toString( 16 ) + "\n" );
+            warn_blk.print( "    This is quite likely to result in nontermination of the symbolic simulator.\n" );
+            warn_blk.jump( trampoline );
+
+            // Figure out if the address to jump to is concrete
+            Expr is_conc = curr_bb.isConcrete( e );
+
+            // Jump directly to trampoline if so, but print a warning if it is symbolic
+            curr_bb.branch( is_conc, trampoline, warn_blk );
             curr_bb = null;
             break;
         }
