@@ -55,10 +55,13 @@ class CrucibleMain {
             PCodeTranslator translator = new PCodeTranslator( sim, prog, abi, "pcodeCFG" );
             MachineState machine = new MachineState( sim, translator.getProc(), prog, abi );
 
+            //testEx( sim, machine );
+            testS20( sim, machine );
+
             //testLFSR( sim, machine );
             //testFirstZero( sim, machine );
             //testAES( sim, machine, testKey, testInput0, testOutput0 );
-            testAES( sim, machine, testKey, testInput1, testOutput1 );
+            //testAES( sim, machine, testKey, testInput1, testOutput1 );
 
         } catch (SimulatorAbortedException ex) {
             ex.printStackTrace();
@@ -75,6 +78,51 @@ class CrucibleMain {
             sim.close();
         }
     }
+
+    public static void testEx( SAWSimulator sim, MachineState machine )
+        throws Exception
+    {
+        SimulatorValue retAddr = machine.makeWord( 0xdeadbeefl );
+        SimulatorValue stack_chk_guard = machine.makeWord( 0x1008 );
+        SimulatorValue stack_canary = sim.freshConstant( VarType.bitvector(64) );
+        machine.poke( stack_chk_guard, 8, stack_canary );
+
+        SimulatorValue result = machine.callFunction( retAddr, "_broken" );
+        sim.writeSAW( "broken.sawcore", result );
+    }
+
+    public static void testS20( SAWSimulator sim, MachineState machine )
+        throws Exception
+    {
+        SimulatorValue retAddr = machine.makeWord( 0xdeadbeefl );
+
+        int how_many = 64;
+        SimulatorValue arg = machine.makeWord( 0x7000l );
+
+        SimulatorValue symInput = sim.freshConstant( VarType.vector( how_many, VarType.bitvector(8) ) );
+
+        for( int i = 0; i < how_many; i++ ) {
+            SimulatorValue off = sim.bvAdd( arg, machine.makeWord( i ) );
+            //SimulatorValue val = sim.freshConstant( VarType.bitvector(8) );
+            SimulatorValue val = sim.vectorGetEntry( symInput, sim.natLiteral( i ) );
+            machine.poke( off, 1, val );
+        }
+
+        // set up the stack register(s)
+        machine.initStack( BigInteger.valueOf( 0x4000l ) );
+
+        SimulatorValue result = machine.callFunction( retAddr, "_s20_hash", arg );
+
+        SimulatorValue[] outputs = new SimulatorValue[how_many];
+        for( int i = 0; i < how_many; i++ ) {
+            SimulatorValue off = sim.bvAdd( arg, machine.makeWord( i ) );
+            outputs[i] = machine.peek( off, 1 );
+        }
+
+        SimulatorValue output = sim.vectorLit( Type.bitvector(8), outputs );
+        sim.writeSAW( "s20_hash.saw", outputs );
+    }
+
 
     public static void testLFSR( SAWSimulator sim, MachineState machine )
         throws Exception
@@ -103,14 +151,14 @@ class CrucibleMain {
         SimulatorValue arg1 = machine.makeWord( 0x7000l );
         SimulatorValue arg2 = machine.makeWord( how_many );
 
-	//SimulatorValue vals = sim.freshConstant(VarType.vector( how_many, VarType.bitvector( 32 )));
+        //SimulatorValue vals = sim.freshConstant(VarType.vector( how_many, VarType.bitvector( 32 )));
 
         // Set up an array of 4-byte integers
         SimulatorValue baseVal = sim.bvLiteral( 32, 0x100 );
         for( int i = 0; i < how_many; i++ ) {
             SimulatorValue off = sim.bvAdd( arg1, machine.makeWord( 4*i ) );
             SimulatorValue val = sim.bvAdd( baseVal, sim.bvLiteral( 32, i ) );
-	    //SimulatorValue val = sim.vectorGetEntry( vals, sim.natLiteral( i ) );
+            //SimulatorValue val = sim.vectorGetEntry( vals, sim.natLiteral( i ) );
             machine.poke( off, 4, val );
         }
 
@@ -229,7 +277,7 @@ Some basic AES test vectors.
                           sim.bvLiteral( 8, keyBytes[i] ) );
         }
 
-	SimulatorValue symInput = sim.freshConstant( VarType.vector( 16, VarType.bitvector(8) ) );
+        SimulatorValue symInput = sim.freshConstant( VarType.vector( 16, VarType.bitvector(8) ) );
 
         // Set up the input
         for( int i=0; i < inputBytes.length; i++ ) {
@@ -254,10 +302,10 @@ Some basic AES test vectors.
 
         System.out.println( "finalpc: " + machine.currentPC ); // should be retAddr
 
-	// SimulatorValue p = sim.boolLiteral( true );
-	// for( int i=0; i<inputBytes.length; i++ ) {
-	//     SimulatorValue in = sim.bvLiteral( 8, inputBytes[i] );
-	//     p = sim.and( p, sim.eq( in, symInputs[i] ) );
+        // SimulatorValue p = sim.boolLiteral( true );
+        // for( int i=0; i<inputBytes.length; i++ ) {
+        //     SimulatorValue in = sim.bvLiteral( 8, inputBytes[i] );
+        //     p = sim.and( p, sim.eq( in, symInputs[i] ) );
         // }
 
         // SimulatorValue q = sim.boolLiteral( true );
@@ -269,7 +317,7 @@ Some basic AES test vectors.
         // }
 
         // //q = sim.not( q );
-	// q = sim.and( p, sim.not( q ) );
+        // q = sim.and( p, sim.not( q ) );
 
         // System.out.println("Answer: " + q );
 
