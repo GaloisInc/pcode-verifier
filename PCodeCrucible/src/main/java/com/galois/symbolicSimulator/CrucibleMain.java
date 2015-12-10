@@ -56,7 +56,8 @@ class CrucibleMain {
             MachineState machine = new MachineState( sim, translator.getProc(), prog, abi );
 
             //testEx( sim, machine );
-            testS20( sim, machine );
+            testS20_expand32( sim, machine );
+            //testS20_hash( sim, machine );
 
             //testLFSR( sim, machine );
             //testFirstZero( sim, machine );
@@ -91,7 +92,7 @@ class CrucibleMain {
         sim.writeSAW( "broken.sawcore", result );
     }
 
-    public static void testS20( SAWSimulator sim, MachineState machine )
+    public static void testS20_hash( SAWSimulator sim, MachineState machine )
         throws Exception
     {
         SimulatorValue retAddr = machine.makeWord( 0xdeadbeefl );
@@ -120,9 +121,119 @@ class CrucibleMain {
         }
 
         SimulatorValue output = sim.vectorLit( Type.bitvector(8), outputs );
-        sim.writeSAW( "s20_hash.saw", outputs );
+        sim.writeSAW( "s20_hash.saw", output );
     }
 
+    public static void testS20_expand32( SAWSimulator sim, MachineState machine )
+        throws Exception
+    {
+        SimulatorValue retAddr = machine.makeWord( 0xdeadbeefl );
+
+        int key_num = 32;
+        int nonce_num = 16;
+        int keystream_num = 64;
+
+        SimulatorValue key_arg       = machine.makeWord( 0x7000l );
+        SimulatorValue nonce_arg     = machine.makeWord( 0x8000l );
+        SimulatorValue keystream_arg = machine.makeWord( 0x9000l );
+        
+        //SimulatorValue key       = sim.freshConstant( VarType.vector( key_num, VarType.bitvector(8) ) );
+        //SimulatorValue nonce     = sim.freshConstant( VarType.vector( nonce_num, VarType.bitvector(8) ) );
+
+        for( int i = 0; i < key_num; i++ ) {
+            SimulatorValue off = sim.bvAdd( key_arg, machine.makeWord( i ) );
+            SimulatorValue val = sim.bvLiteral( 8, i ); 
+            //SimulatorValue val = sim.vectorGetEntry( key, sim.natLiteral( i ) );
+            machine.poke( off, 1, val );
+        }
+        for( int i = 0; i < nonce_num; i++ ) {
+            SimulatorValue off = sim.bvAdd( nonce_arg, machine.makeWord( i ) );
+            SimulatorValue val = sim.bvLiteral( 8, 0xf0 + i ); 
+            //SimulatorValue val = sim.vectorGetEntry( nonce, sim.natLiteral( i ) );
+            machine.poke( off, 1, val );
+        }
+
+        // set up the stack register(s)
+        machine.initStack( BigInteger.valueOf( 0x4000l ) );
+
+        SimulatorValue result =
+            machine.callFunction( retAddr, "_s20_expand32",
+                                  key_arg,
+                                  nonce_arg,
+                                  keystream_arg
+                                );
+
+        System.out.println( "finalpc: " + machine.currentPC ); // should be retAddr
+
+        SimulatorValue[] outputs = new SimulatorValue[keystream_num];
+        for( int i = 0; i < keystream_num; i++ ) {
+            SimulatorValue off = sim.bvAdd( keystream_arg, machine.makeWord( i ) );
+            outputs[i] = machine.peek( off, 1 );
+            System.out.print( outputs[i].toString() + " " );
+            if( (i+1) % 10 == 0 ) { System.out.println(); }
+        }
+        System.out.println();
+
+        //SimulatorValue output = sim.vectorLit( Type.bitvector(8), outputs );
+        //System.out.println( output.toString() );
+        //sim.writeSAW( "s20_expand32.saw", output );
+    }
+
+    public static void testS20_crypt32( SAWSimulator sim, MachineState machine )
+        throws Exception
+    {
+        SimulatorValue retAddr = machine.makeWord( 0xdeadbeefl );
+
+        int knum = 32;
+        int nnum =  8;
+        int mnum = 16;
+
+        SimulatorValue karg = machine.makeWord( 0x7000l );
+        SimulatorValue narg = machine.makeWord( 0x7100l );
+        SimulatorValue marg = machine.makeWord( 0x7200l );
+        
+
+        SimulatorValue key   = sim.freshConstant( VarType.vector( knum, VarType.bitvector(8) ) );
+        SimulatorValue nonce = sim.freshConstant( VarType.vector( nnum, VarType.bitvector(8) ) );
+        SimulatorValue msg   = sim.freshConstant( VarType.vector( mnum, VarType.bitvector(8) ) );
+
+        for( int i = 0; i < knum; i++ ) {
+            SimulatorValue off = sim.bvAdd( karg, machine.makeWord( i ) );
+            SimulatorValue val = sim.vectorGetEntry( key, sim.natLiteral( i ) );
+            machine.poke( off, 1, val );
+        }
+        for( int i = 0; i < nnum; i++ ) {
+            SimulatorValue off = sim.bvAdd( narg, machine.makeWord( i ) );
+            SimulatorValue val = sim.vectorGetEntry( nonce, sim.natLiteral( i ) );
+            machine.poke( off, 1, val );
+        }
+        for( int i = 0; i < mnum; i++ ) {
+            SimulatorValue off = sim.bvAdd( marg, machine.makeWord( i ) );
+            SimulatorValue val = sim.vectorGetEntry( msg, sim.natLiteral( i ) );
+            machine.poke( off, 1, val );
+        }
+
+        // set up the stack register(s)
+        machine.initStack( BigInteger.valueOf( 0x4000l ) );
+
+        SimulatorValue result =
+            machine.callFunction( retAddr, "_s20_crypt32",
+                                  karg,
+                                  narg,
+                                  machine.makeWord( 0 ),
+                                  marg,
+                                  machine.makeWord( mnum )
+                                );
+
+        SimulatorValue[] outputs = new SimulatorValue[mnum];
+        for( int i = 0; i < mnum; i++ ) {
+            SimulatorValue off = sim.bvAdd( marg, machine.makeWord( i ) );
+            outputs[i] = machine.peek( off, 1 );
+        }
+
+        SimulatorValue output = sim.vectorLit( Type.bitvector(8), outputs );
+        sim.writeSAW( "s20_crypt32.saw", output );
+    }
 
     public static void testLFSR( SAWSimulator sim, MachineState machine )
         throws Exception
