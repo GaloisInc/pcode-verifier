@@ -136,20 +136,20 @@ class CrucibleMain {
         SimulatorValue key_arg       = machine.makeWord( 0x7000l );
         SimulatorValue nonce_arg     = machine.makeWord( 0x8000l );
         SimulatorValue keystream_arg = machine.makeWord( 0x9000l );
-        
-        //SimulatorValue key       = sim.freshConstant( VarType.vector( key_num, VarType.bitvector(8) ) );
-        //SimulatorValue nonce     = sim.freshConstant( VarType.vector( nonce_num, VarType.bitvector(8) ) );
+
+        SimulatorValue key       = sim.freshConstant( VarType.vector( key_num, VarType.bitvector(8) ) );
+        SimulatorValue nonce     = sim.freshConstant( VarType.vector( nonce_num, VarType.bitvector(8) ) );
 
         for( int i = 0; i < key_num; i++ ) {
             SimulatorValue off = sim.bvAdd( key_arg, machine.makeWord( i ) );
-            SimulatorValue val = sim.bvLiteral( 8, i ); 
-            //SimulatorValue val = sim.vectorGetEntry( key, sim.natLiteral( i ) );
+            //SimulatorValue val = sim.bvLiteral( 8, 0 );
+            SimulatorValue val = sim.vectorGetEntry( key, sim.natLiteral( i ) );
             machine.poke( off, 1, val );
         }
         for( int i = 0; i < nonce_num; i++ ) {
             SimulatorValue off = sim.bvAdd( nonce_arg, machine.makeWord( i ) );
-            SimulatorValue val = sim.bvLiteral( 8, 0xf0 + i ); 
-            //SimulatorValue val = sim.vectorGetEntry( nonce, sim.natLiteral( i ) );
+            //SimulatorValue val = sim.bvLiteral( 8, 0 );
+            SimulatorValue val = sim.vectorGetEntry( nonce, sim.natLiteral( i ) );
             machine.poke( off, 1, val );
         }
 
@@ -169,14 +169,14 @@ class CrucibleMain {
         for( int i = 0; i < keystream_num; i++ ) {
             SimulatorValue off = sim.bvAdd( keystream_arg, machine.makeWord( i ) );
             outputs[i] = machine.peek( off, 1 );
-            System.out.print( outputs[i].toString() + " " );
-            if( (i+1) % 10 == 0 ) { System.out.println(); }
+            //System.out.print( outputs[i].toString() + " " );
+            //if( (i+1) % 10 == 0 ) { System.out.println(); }
         }
-        System.out.println();
+        //System.out.println();
 
-        //SimulatorValue output = sim.vectorLit( Type.bitvector(8), outputs );
-        //System.out.println( output.toString() );
-        //sim.writeSAW( "s20_expand32.saw", output );
+        SimulatorValue output = sim.vectorLit( Type.bitvector(8), outputs );
+        System.out.println( output.toString() );
+        sim.writeSAW( "s20_expand32.saw", output );
     }
 
     public static void testS20_crypt32( SAWSimulator sim, MachineState machine )
@@ -191,7 +191,7 @@ class CrucibleMain {
         SimulatorValue karg = machine.makeWord( 0x7000l );
         SimulatorValue narg = machine.makeWord( 0x7100l );
         SimulatorValue marg = machine.makeWord( 0x7200l );
-        
+
 
         SimulatorValue key   = sim.freshConstant( VarType.vector( knum, VarType.bitvector(8) ) );
         SimulatorValue nonce = sim.freshConstant( VarType.vector( nnum, VarType.bitvector(8) ) );

@@ -778,36 +778,55 @@ undefined *undefined4</parameter_description>
 <parameter_description>
 longlonglong</parameter_description>
 <basicblock>
-<op mnemonic="COPY" code="1"><seqnum space="ram" offset="0x210" uniq="0x0"/><addr space="unique" offset="0x23f0" size="8"/><addr space="register" offset="0x28" size="8"/></op>
+
+<!-- pushb %rbp -->
+ <op mnemonic="COPY" code="1"><seqnum space="ram" offset="0x210" uniq="0x0"/><addr space="unique" offset="0x23f0" size="8"/><addr space="register" offset="0x28" size="8"/></op>
 <op mnemonic="INT_SUB" code="20"><seqnum space="ram" offset="0x210" uniq="0x1"/><addr space="register" offset="0x20" size="8"/><addr space="register" offset="0x20" size="8"/><addr space="const" offset="0x8" size="8"/></op>
 <op mnemonic="STORE" code="3"><seqnum space="ram" offset="0x210" uniq="0x2"/><void/><spaceid name="ram"/><addr space="register" offset="0x20" size="8"/><addr space="unique" offset="0x23f0" size="8"/></op>
+
+<!-- movq %rsp, %rbp -->
 <op mnemonic="COPY" code="1"><seqnum space="ram" offset="0x211" uniq="0x0"/><addr space="register" offset="0x28" size="8"/><addr space="register" offset="0x20" size="8"/></op>
+
+<!-- subq $0x40, %rsp -->
 <op mnemonic="INT_LESS" code="15"><seqnum space="ram" offset="0x214" uniq="0x0"/><addr space="register" offset="0x200" size="1"/><addr space="register" offset="0x20" size="8"/><addr space="const" offset="0x40" size="8"/></op>
 <op mnemonic="INT_SBORROW" code="23"><seqnum space="ram" offset="0x214" uniq="0x1"/><addr space="register" offset="0x20b" size="1"/><addr space="register" offset="0x20" size="8"/><addr space="const" offset="0x40" size="8"/></op>
 <op mnemonic="INT_SUB" code="20"><seqnum space="ram" offset="0x214" uniq="0x2"/><addr space="register" offset="0x20" size="8"/><addr space="register" offset="0x20" size="8"/><addr space="const" offset="0x40" size="8"/></op>
 <op mnemonic="INT_SLESS" code="13"><seqnum space="ram" offset="0x214" uniq="0x3"/><addr space="register" offset="0x207" size="1"/><addr space="register" offset="0x20" size="8"/><addr space="const" offset="0x0" size="8"/></op>
 <op mnemonic="INT_EQUAL" code="11"><seqnum space="ram" offset="0x214" uniq="0x4"/><addr space="register" offset="0x206" size="1"/><addr space="register" offset="0x20" size="8"/><addr space="const" offset="0x0" size="8"/></op>
+
+<!-- movq %rdi, -0x8(P%rbp) -->
 <op mnemonic="INT_ADD" code="19"><seqnum space="ram" offset="0x218" uniq="0x0"/><addr space="unique" offset="0x610" size="8"/><addr space="register" offset="0x28" size="8"/><addr space="const" offset="0xfffffffffffffff8" size="8"/></op>
 <op mnemonic="COPY" code="1"><seqnum space="ram" offset="0x218" uniq="0x1"/><addr space="unique" offset="0x1ee0" size="8"/><addr space="register" offset="0x38" size="8"/></op>
 <op mnemonic="STORE" code="3"><seqnum space="ram" offset="0x218" uniq="0x2"/><void/><spaceid name="ram"/><addr space="unique" offset="0x610" size="8"/><addr space="unique" offset="0x1ee0" size="8"/></op>
+
+<!-- movq %rsi, -0x10(%rbp) -->
 <op mnemonic="INT_ADD" code="19"><seqnum space="ram" offset="0x21c" uniq="0x0"/><addr space="unique" offset="0x610" size="8"/><addr space="register" offset="0x28" size="8"/><addr space="const" offset="0xfffffffffffffff0" size="8"/></op>
 <op mnemonic="COPY" code="1"><seqnum space="ram" offset="0x21c" uniq="0x1"/><addr space="unique" offset="0x1ee0" size="8"/><addr space="register" offset="0x30" size="8"/></op>
 <op mnemonic="STORE" code="3"><seqnum space="ram" offset="0x21c" uniq="0x2"/><void/><spaceid name="ram"/><addr space="unique" offset="0x610" size="8"/><addr space="unique" offset="0x1ee0" size="8"/></op>
+
+<!-- movq %rdx, -0x18(%rbp) -->
 <op mnemonic="INT_ADD" code="19"><seqnum space="ram" offset="0x220" uniq="0x0"/><addr space="unique" offset="0x610" size="8"/><addr space="register" offset="0x28" size="8"/><addr space="const" offset="0xffffffffffffffe8" size="8"/></op>
 <op mnemonic="COPY" code="1"><seqnum space="ram" offset="0x220" uniq="0x1"/><addr space="unique" offset="0x1ee0" size="8"/><addr space="register" offset="0x10" size="8"/></op>
 <op mnemonic="STORE" code="3"><seqnum space="ram" offset="0x220" uniq="0x2"/><void/><spaceid name="ram"/><addr space="unique" offset="0x610" size="8"/><addr space="unique" offset="0x1ee0" size="8"/></op>
+
+<!-- movq ($0x7f0), %rdx -->
 <op mnemonic="COPY" code="1"><seqnum space="ram" offset="0x224" uniq="0x0"/><addr space="register" offset="0x10" size="8"/><addr space="ram" offset="0x7f0" size="8"/></op>
 
+<!-- movq %rdx, -0x30(%rbp) -->
 <op mnemonic="INT_ADD" code="19"><seqnum space="ram" offset="0x22b" uniq="0x0"/><addr space="unique" offset="0x610" size="8"/><addr space="register" offset="0x28" size="8"/><addr space="const" offset="0xffffffffffffffd0" size="8"/></op>
 <op mnemonic="COPY" code="1"><seqnum space="ram" offset="0x22b" uniq="0x1"/><addr space="unique" offset="0x1ee0" size="8"/><addr space="register" offset="0x10" size="8"/></op>
 <op mnemonic="STORE" code="3"><seqnum space="ram" offset="0x22b" uniq="0x2"/><void/><spaceid name="ram"/><addr space="unique" offset="0x610" size="8"/><addr space="unique" offset="0x1ee0" size="8"/></op>
 
-<op mnemonic="COPY" code="1"><seqnum space="ram" offset="0x22f" uniq="0x0"/><addr space="register" offset="0x10" size="8"/><addr space="ram" offset="0x7f0" size="8"/></op>
+<!--  movq    L_s20_expand32.o+8(%rip), %rdx    (same as 0x224! but should be 8 bytes advanced!) -->
+<!--<op mnemonic="COPY" code="1"><seqnum space="ram" offset="0x22f" uniq="0x0"/><addr space="register" offset="0x10" size="8"/><addr space="ram" offset="0x7f0" size="8"/></op>-->
+<op mnemonic="COPY" code="1"><seqnum space="ram" offset="0x22f" uniq="0x0"/><addr space="register" offset="0x10" size="8"/><addr space="ram" offset="0x7f8" size="8"/></op>
 
+<!-- movq    %rdx, -0x28(%rbp) -->
 <op mnemonic="INT_ADD" code="19"><seqnum space="ram" offset="0x236" uniq="0x0"/><addr space="unique" offset="0x610" size="8"/><addr space="register" offset="0x28" size="8"/><addr space="const" offset="0xffffffffffffffd8" size="8"/></op>
 <op mnemonic="COPY" code="1"><seqnum space="ram" offset="0x236" uniq="0x1"/><addr space="unique" offset="0x1ee0" size="8"/><addr space="register" offset="0x10" size="8"/></op>
 <op mnemonic="STORE" code="3"><seqnum space="ram" offset="0x236" uniq="0x2"/><void/><spaceid name="ram"/><addr space="unique" offset="0x610" size="8"/><addr space="unique" offset="0x1ee0" size="8"/></op>
 
+<!-- movl    $_s20_crypt32, -0x1c(%rbp) -->
 <op mnemonic="INT_ADD" code="19"><seqnum space="ram" offset="0x23a" uniq="0x0"/><addr space="unique" offset="0x610" size="8"/><addr space="register" offset="0x28" size="8"/><addr space="const" offset="0xffffffffffffffe4" size="8"/></op>
 <op mnemonic="COPY" code="1"><seqnum space="ram" offset="0x23a" uniq="0x1"/><addr space="unique" offset="0x1ed0" size="4"/><addr space="const" offset="0x0" size="4"/></op>
 <op mnemonic="STORE" code="3"><seqnum space="ram" offset="0x23a" uniq="0x2"/><void/><spaceid name="ram"/><addr space="unique" offset="0x610" size="8"/><addr space="unique" offset="0x1ed0" size="4"/></op>
@@ -815,6 +834,7 @@ longlonglong</parameter_description>
 
 
 <!-- beginning of outer loop -->
+<!-- cmpl    $0x40, -0x1c(%rbp) -->
 <basicblock>
 <op mnemonic="INT_ADD" code="19"><seqnum space="ram" offset="0x241" uniq="0x0"/><addr space="unique" offset="0x610" size="8"/><addr space="register" offset="0x28" size="8"/><addr space="const" offset="0xffffffffffffffe4" size="8"/></op>
 <op mnemonic="LOAD" code="2"><seqnum space="ram" offset="0x241" uniq="0x1"/><addr space="unique" offset="0x1ed0" size="4"/><spaceid name="ram"/><addr space="unique" offset="0x610" size="8"/></op>
@@ -826,11 +846,13 @@ longlonglong</parameter_description>
 <op mnemonic="INT_SLESS" code="13"><seqnum space="ram" offset="0x241" uniq="0x7"/><addr space="register" offset="0x207" size="1"/><addr space="unique" offset="0x5950" size="4"/><addr space="const" offset="0x0" size="4"/></op>
 <op mnemonic="INT_EQUAL" code="11"><seqnum space="ram" offset="0x241" uniq="0x8"/><addr space="register" offset="0x206" size="1"/><addr space="unique" offset="0x5950" size="4"/><addr space="const" offset="0x0" size="4"/></op>
 
+<!-- jge 0x2cb    -->
 <op mnemonic="INT_EQUAL" code="11"><seqnum space="ram" offset="0x248" uniq="0x0"/><addr space="unique" offset="0x20c0" size="1"/><addr space="register" offset="0x20b" size="1"/><addr space="register" offset="0x207" size="1"/></op>
 <op mnemonic="CBRANCH" code="5"><seqnum space="ram" offset="0x248" uniq="0x1"/><void/><addr space="ram" offset="0x2cb" size="8"/><addr space="unique" offset="0x20c0" size="1"/></op>
 </basicblock>
 
 <basicblock>
+<!-- movl   $0x0, -0x20(%rbp) -->
 <op mnemonic="INT_ADD" code="19"><seqnum space="ram" offset="0x24e" uniq="0x0"/><addr space="unique" offset="0x610" size="8"/><addr space="register" offset="0x28" size="8"/><addr space="const" offset="0xffffffffffffffe0" size="8"/></op>
 <op mnemonic="COPY" code="1"><seqnum space="ram" offset="0x24e" uniq="0x1"/><addr space="unique" offset="0x1ed0" size="4"/><addr space="const" offset="0x0" size="4"/></op>
 <op mnemonic="STORE" code="3"><seqnum space="ram" offset="0x24e" uniq="0x2"/><void/><spaceid name="ram"/><addr space="unique" offset="0x610" size="8"/><addr space="unique" offset="0x1ed0" size="4"/></op>
@@ -881,16 +903,16 @@ longlonglong</parameter_description>
 <op mnemonic="COPY" code="1"><seqnum space="ram" offset="0x276" uniq="0x0"/><addr space="register" offset="0x0" size="4"/><addr space="register" offset="0x30" size="4"/></op>
 <op mnemonic="INT_ZEXT" code="17"><seqnum space="ram" offset="0x276" uniq="0x1"/><addr space="register" offset="0x0" size="8"/><addr space="register" offset="0x0" size="4"/></op>
 
-<!-- [???] <- rdx -->
+<!-- movq %rdx, -0x40(%rbp) -->
 <op mnemonic="INT_ADD" code="19"><seqnum space="ram" offset="0x278" uniq="0x0"/><addr space="unique" offset="0x610" size="8"/><addr space="register" offset="0x28" size="8"/><addr space="const" offset="0xffffffffffffffc0" size="8"/></op>
 <op mnemonic="COPY" code="1"><seqnum space="ram" offset="0x278" uniq="0x1"/><addr space="unique" offset="0x1ee0" size="8"/><addr space="register" offset="0x10" size="8"/></op>
 <op mnemonic="STORE" code="3"><seqnum space="ram" offset="0x278" uniq="0x2"/><void/><spaceid name="ram"/><addr space="unique" offset="0x610" size="8"/><addr space="unique" offset="0x1ee0" size="8"/></op>
 
-<!-- rdx <- upper half of rax ? -->
+<!-- cltd (sign extend rax in rdx:rax) -->
 <op mnemonic="INT_SEXT" code="18"><seqnum space="ram" offset="0x27c" uniq="0x0"/><addr space="unique" offset="0x57f0" size="8"/><addr space="register" offset="0x0" size="4"/></op>
 <op mnemonic="SUBPIECE" code="63"><seqnum space="ram" offset="0x27c" uniq="0x1"/><addr space="register" offset="0x10" size="4"/><addr space="unique" offset="0x57f0" size="8"/><addr space="const" offset="0x4" size="4"/></op>
 
-<!-- rax <- sdiv (rdx / rcx) -->
+<!-- idivl %rcx -->
 <op mnemonic="INT_SEXT" code="18"><seqnum space="ram" offset="0x27d" uniq="0x0"/><addr space="unique" offset="0x7190" size="8"/><addr space="register" offset="0x8" size="4"/></op>
 <op mnemonic="INT_ZEXT" code="17"><seqnum space="ram" offset="0x27d" uniq="0x1"/><addr space="unique" offset="0x71a0" size="8"/><addr space="register" offset="0x10" size="4"/></op>
 <op mnemonic="INT_LEFT" code="29"><seqnum space="ram" offset="0x27d" uniq="0x2"/><addr space="unique" offset="0x71b0" size="8"/><addr space="unique" offset="0x71a0" size="8"/><addr space="const" offset="0x20" size="4"/></op>
@@ -901,10 +923,10 @@ longlonglong</parameter_description>
 <op mnemonic="INT_SREM" code="36"><seqnum space="ram" offset="0x27d" uniq="0x7"/><addr space="unique" offset="0x7230" size="8"/><addr space="unique" offset="0x71e0" size="8"/><addr space="unique" offset="0x7190" size="8"/></op>
 <op mnemonic="SUBPIECE" code="63"><seqnum space="ram" offset="0x27d" uniq="0x8"/><addr space="register" offset="0x10" size="4"/><addr space="unique" offset="0x7230" size="8"/><addr space="const" offset="0x0" size="4"/></op>
 
-<!-- rdi <- rax -->
+<!-- movslq %eax, %rdi -->
 <op mnemonic="INT_SEXT" code="18"><seqnum space="ram" offset="0x27f" uniq="0x0"/><addr space="register" offset="0x38" size="8"/><addr space="register" offset="0x0" size="4"/></op>
 
-<!-- ?????????? -->
+<!-- shlq $0x2, %rdi -->
 <op mnemonic="INT_AND" code="27"><seqnum space="ram" offset="0x282" uniq="0x0"/><addr space="unique" offset="0xb5e0" size="4"/><addr space="const" offset="0x2" size="4"/><addr space="const" offset="0x3f" size="4"/></op>
 <op mnemonic="COPY" code="1"><seqnum space="ram" offset="0x282" uniq="0x1"/><addr space="unique" offset="0xb5f0" size="8"/><addr space="register" offset="0x38" size="8"/></op>
 <op mnemonic="INT_LEFT" code="29"><seqnum space="ram" offset="0x282" uniq="0x2"/><addr space="register" offset="0x38" size="8"/><addr space="register" offset="0x38" size="8"/><addr space="unique" offset="0xb5e0" size="4"/></op>
@@ -935,34 +957,36 @@ longlonglong</parameter_description>
 <op mnemonic="INT_AND" code="27"><seqnum space="ram" offset="0x282" uniq="0x1b"/><addr space="unique" offset="0x2b80" size="1"/><addr space="unique" offset="0x2ad0" size="1"/><addr space="unique" offset="0x2b50" size="1"/></op>
 <op mnemonic="INT_OR" code="28"><seqnum space="ram" offset="0x282" uniq="0x1c"/><addr space="register" offset="0x206" size="1"/><addr space="unique" offset="0x2b70" size="1"/><addr space="unique" offset="0x2b80" size="1"/></op>
 
-<!-- r8 <- [temp1] -->
+<!-- movq -0x38(%rbp), %r8 -->
 <op mnemonic="INT_ADD" code="19"><seqnum space="ram" offset="0x286" uniq="0x0"/><addr space="unique" offset="0x610" size="8"/><addr space="register" offset="0x28" size="8"/><addr space="const" offset="0xffffffffffffffc8" size="8"/></op>
 <op mnemonic="LOAD" code="2"><seqnum space="ram" offset="0x286" uniq="0x1"/><addr space="unique" offset="0x1ee0" size="8"/><spaceid name="ram"/><addr space="unique" offset="0x610" size="8"/></op>
 <op mnemonic="COPY" code="1"><seqnum space="ram" offset="0x286" uniq="0x2"/><addr space="register" offset="0x80" size="8"/><addr space="unique" offset="0x1ee0" size="8"/></op>
 
-<!-- r8 <- r8 + rdi  -->
+<!-- addq %rdi, %r8 -->
 <op mnemonic="INT_CARRY" code="21"><seqnum space="ram" offset="0x28a" uniq="0x0"/><addr space="register" offset="0x200" size="1"/><addr space="register" offset="0x80" size="8"/><addr space="register" offset="0x38" size="8"/></op>
 <op mnemonic="INT_SCARRY" code="22"><seqnum space="ram" offset="0x28a" uniq="0x1"/><addr space="register" offset="0x20b" size="1"/><addr space="register" offset="0x80" size="8"/><addr space="register" offset="0x38" size="8"/></op>
 <op mnemonic="INT_ADD" code="19"><seqnum space="ram" offset="0x28a" uniq="0x2"/><addr space="register" offset="0x80" size="8"/><addr space="register" offset="0x80" size="8"/><addr space="register" offset="0x38" size="8"/></op>
 <op mnemonic="INT_SLESS" code="13"><seqnum space="ram" offset="0x28a" uniq="0x3"/><addr space="register" offset="0x207" size="1"/><addr space="register" offset="0x80" size="8"/><addr space="const" offset="0x0" size="8"/></op>
 <op mnemonic="INT_EQUAL" code="11"><seqnum space="ram" offset="0x28a" uniq="0x4"/><addr space="register" offset="0x206" size="1"/><addr space="register" offset="0x80" size="8"/><addr space="const" offset="0x0" size="8"/></op>
 
-<!-- rdi <- [???]  -->
+<!-- movq -0x40(%rbp), %rdi -->
 <op mnemonic="INT_ADD" code="19"><seqnum space="ram" offset="0x28d" uniq="0x0"/><addr space="unique" offset="0x610" size="8"/><addr space="register" offset="0x28" size="8"/><addr space="const" offset="0xffffffffffffffc0" size="8"/></op>
 <op mnemonic="LOAD" code="2"><seqnum space="ram" offset="0x28d" uniq="0x1"/><addr space="unique" offset="0x1ee0" size="8"/><spaceid name="ram"/><addr space="unique" offset="0x610" size="8"/></op>
 <op mnemonic="COPY" code="1"><seqnum space="ram" offset="0x28d" uniq="0x2"/><addr space="register" offset="0x38" size="8"/><addr space="unique" offset="0x1ee0" size="8"/></op>
 
-<!-- r9 <- [r8 + rdi]  -->
+<!-- movb (%r8, %rdi), %r9b -->
 <op mnemonic="INT_MULT" code="32"><seqnum space="ram" offset="0x291" uniq="0x0"/><addr space="unique" offset="0x650" size="8"/><addr space="register" offset="0x38" size="8"/><addr space="const" offset="0x1" size="8"/></op>
 <op mnemonic="INT_ADD" code="19"><seqnum space="ram" offset="0x291" uniq="0x1"/><addr space="unique" offset="0x670" size="8"/><addr space="register" offset="0x80" size="8"/><addr space="unique" offset="0x650" size="8"/></op>
 <op mnemonic="LOAD" code="2"><seqnum space="ram" offset="0x291" uniq="0x2"/><addr space="unique" offset="0x1e80" size="1"/><spaceid name="ram"/><addr space="unique" offset="0x670" size="8"/></op>
 <op mnemonic="COPY" code="1"><seqnum space="ram" offset="0x291" uniq="0x3"/><addr space="register" offset="0x88" size="1"/><addr space="unique" offset="0x1e80" size="1"/></op>
 
+<!-- movl -0x1c(%rbp), %eax -->
 <op mnemonic="INT_ADD" code="19"><seqnum space="ram" offset="0x295" uniq="0x0"/><addr space="unique" offset="0x610" size="8"/><addr space="register" offset="0x28" size="8"/><addr space="const" offset="0xffffffffffffffe4" size="8"/></op>
 <op mnemonic="LOAD" code="2"><seqnum space="ram" offset="0x295" uniq="0x1"/><addr space="unique" offset="0x1ec0" size="4"/><spaceid name="ram"/><addr space="unique" offset="0x610" size="8"/></op>
 <op mnemonic="COPY" code="1"><seqnum space="ram" offset="0x295" uniq="0x2"/><addr space="register" offset="0x0" size="4"/><addr space="unique" offset="0x1ec0" size="4"/></op>
 <op mnemonic="INT_ZEXT" code="17"><seqnum space="ram" offset="0x295" uniq="0x3"/><addr space="register" offset="0x0" size="8"/><addr space="register" offset="0x0" size="4"/></op>
 
+<!-- addl -0x20(%rbp), %eax -->
 <op mnemonic="INT_ADD" code="19"><seqnum space="ram" offset="0x298" uniq="0x0"/><addr space="unique" offset="0x610" size="8"/><addr space="register" offset="0x28" size="8"/><addr space="const" offset="0xffffffffffffffe0" size="8"/></op>
 <op mnemonic="LOAD" code="2"><seqnum space="ram" offset="0x298" uniq="0x1"/><addr space="unique" offset="0x1ec0" size="4"/><spaceid name="ram"/><addr space="unique" offset="0x610" size="8"/></op>
 <op mnemonic="INT_CARRY" code="21"><seqnum space="ram" offset="0x298" uniq="0x2"/><addr space="register" offset="0x200" size="1"/><addr space="register" offset="0x0" size="4"/><addr space="unique" offset="0x1ec0" size="4"/></op>
@@ -974,25 +998,27 @@ longlonglong</parameter_description>
 <op mnemonic="INT_SLESS" code="13"><seqnum space="ram" offset="0x298" uniq="0x8"/><addr space="register" offset="0x207" size="1"/><addr space="register" offset="0x0" size="4"/><addr space="const" offset="0x0" size="4"/></op>
 <op mnemonic="INT_EQUAL" code="11"><seqnum space="ram" offset="0x298" uniq="0x9"/><addr space="register" offset="0x206" size="1"/><addr space="register" offset="0x0" size="4"/><addr space="const" offset="0x0" size="4"/></op>
 
+<!-- movslq %eax, %r8 -->
 <op mnemonic="INT_SEXT" code="18"><seqnum space="ram" offset="0x29b" uniq="0x0"/><addr space="register" offset="0x80" size="8"/><addr space="register" offset="0x0" size="4"/></op>
 
-<!-- load the desired byte -->
+<!-- movq -0x18(%rbp), %r10 -->
 <op mnemonic="INT_ADD" code="19"><seqnum space="ram" offset="0x29e" uniq="0x0"/><addr space="unique" offset="0x610" size="8"/><addr space="register" offset="0x28" size="8"/><addr space="const" offset="0xffffffffffffffe8" size="8"/></op>
 <op mnemonic="LOAD" code="2"><seqnum space="ram" offset="0x29e" uniq="0x1"/><addr space="unique" offset="0x1ee0" size="8"/><spaceid name="ram"/><addr space="unique" offset="0x610" size="8"/></op>
 <op mnemonic="COPY" code="1"><seqnum space="ram" offset="0x29e" uniq="0x2"/><addr space="register" offset="0x90" size="8"/><addr space="unique" offset="0x1ee0" size="8"/></op>
 
-<!-- perform the store -->
+<!-- movb %r9b, (%r10, %r8) -->
 <op mnemonic="INT_MULT" code="32"><seqnum space="ram" offset="0x2a2" uniq="0x0"/><addr space="unique" offset="0x650" size="8"/><addr space="register" offset="0x80" size="8"/><addr space="const" offset="0x1" size="8"/></op>
 <op mnemonic="INT_ADD" code="19"><seqnum space="ram" offset="0x2a2" uniq="0x1"/><addr space="unique" offset="0x670" size="8"/><addr space="register" offset="0x90" size="8"/><addr space="unique" offset="0x650" size="8"/></op>
 <op mnemonic="COPY" code="1"><seqnum space="ram" offset="0x2a2" uniq="0x2"/><addr space="unique" offset="0x1e80" size="1"/><addr space="register" offset="0x88" size="1"/></op>
 <op mnemonic="STORE" code="3"><seqnum space="ram" offset="0x2a2" uniq="0x3"/><void/><spaceid name="ram"/><addr space="unique" offset="0x670" size="8"/><addr space="unique" offset="0x1e80" size="1"/></op>
 
-<!-- increment j --> 
+<!-- movl -0x20(%rbp), %eax -->
 <op mnemonic="INT_ADD" code="19"><seqnum space="ram" offset="0x2a6" uniq="0x0"/><addr space="unique" offset="0x610" size="8"/><addr space="register" offset="0x28" size="8"/><addr space="const" offset="0xffffffffffffffe0" size="8"/></op>
 <op mnemonic="LOAD" code="2"><seqnum space="ram" offset="0x2a6" uniq="0x1"/><addr space="unique" offset="0x1ec0" size="4"/><spaceid name="ram"/><addr space="unique" offset="0x610" size="8"/></op>
 <op mnemonic="COPY" code="1"><seqnum space="ram" offset="0x2a6" uniq="0x2"/><addr space="register" offset="0x0" size="4"/><addr space="unique" offset="0x1ec0" size="4"/></op>
 <op mnemonic="INT_ZEXT" code="17"><seqnum space="ram" offset="0x2a6" uniq="0x3"/><addr space="register" offset="0x0" size="8"/><addr space="register" offset="0x0" size="4"/></op>
 
+<!-- addl $0x1, eax -->
 <op mnemonic="INT_CARRY" code="21"><seqnum space="ram" offset="0x2a9" uniq="0x0"/><addr space="register" offset="0x200" size="1"/><addr space="register" offset="0x0" size="4"/><addr space="const" offset="0x1" size="4"/></op>
 <op mnemonic="INT_SCARRY" code="22"><seqnum space="ram" offset="0x2a9" uniq="0x1"/><addr space="register" offset="0x20b" size="1"/><addr space="register" offset="0x0" size="4"/><addr space="const" offset="0x1" size="4"/></op>
 <op mnemonic="INT_ADD" code="19"><seqnum space="ram" offset="0x2a9" uniq="0x2"/><addr space="register" offset="0x0" size="4"/><addr space="register" offset="0x0" size="4"/><addr space="const" offset="0x1" size="4"/></op>
@@ -1000,16 +1026,19 @@ longlonglong</parameter_description>
 <op mnemonic="INT_SLESS" code="13"><seqnum space="ram" offset="0x2a9" uniq="0x4"/><addr space="register" offset="0x207" size="1"/><addr space="register" offset="0x0" size="4"/><addr space="const" offset="0x0" size="4"/></op>
 <op mnemonic="INT_EQUAL" code="11"><seqnum space="ram" offset="0x2a9" uniq="0x5"/><addr space="register" offset="0x206" size="1"/><addr space="register" offset="0x0" size="4"/><addr space="const" offset="0x0" size="4"/></op>
 
+<!-- movl %eax, -0x20($rbp)  -->
 <op mnemonic="INT_ADD" code="19"><seqnum space="ram" offset="0x2ae" uniq="0x0"/><addr space="unique" offset="0x610" size="8"/><addr space="register" offset="0x28" size="8"/><addr space="const" offset="0xffffffffffffffe0" size="8"/></op>
 <op mnemonic="COPY" code="1"><seqnum space="ram" offset="0x2ae" uniq="0x1"/><addr space="unique" offset="0x1ec0" size="4"/><addr space="register" offset="0x0" size="4"/></op>
 <op mnemonic="STORE" code="3"><seqnum space="ram" offset="0x2ae" uniq="0x2"/><void/><spaceid name="ram"/><addr space="unique" offset="0x610" size="8"/><addr space="unique" offset="0x1ec0" size="4"/></op>
 
+<!-- jmp 0x255 -->
 <op mnemonic="BRANCH" code="4"><seqnum space="ram" offset="0x2b1" uniq="0x0"/><void/><addr space="ram" offset="0x255" size="8"/></op>
 <!-- inner loop back branch -->
 </basicblock>
 
 <!-- exit point of inner loop -->
 <basicblock>
+<!-- jmp 0x2bb -->
 <op mnemonic="BRANCH" code="4"><seqnum space="ram" offset="0x2b6" uniq="0x0"/><void/><addr space="ram" offset="0x2bb" size="8"/></op>
 </basicblock>
 
@@ -1038,7 +1067,7 @@ longlonglong</parameter_description>
 <op mnemonic="STORE" code="3"><seqnum space="ram" offset="0x2cb" uniq="0x2"/><void/><spaceid name="ram"/><addr space="unique" offset="0x610" size="8"/><addr space="unique" offset="0x1ed0" size="4"/></op>
 </basicblock>
 
-<!-- start point of second loop --> 
+<!-- start point of second loop -->
 <basicblock>
 <op mnemonic="INT_ADD" code="19"><seqnum space="ram" offset="0x2d2" uniq="0x0"/><addr space="unique" offset="0x610" size="8"/><addr space="register" offset="0x28" size="8"/><addr space="const" offset="0xffffffffffffffe4" size="8"/></op>
 <op mnemonic="LOAD" code="2"><seqnum space="ram" offset="0x2d2" uniq="0x1"/><addr space="unique" offset="0x1ed0" size="4"/><spaceid name="ram"/><addr space="unique" offset="0x610" size="8"/></op>
@@ -1163,17 +1192,14 @@ longlonglong</parameter_description>
 
 <!-- exit point for second loop -->
 <basicblock>
-<op mnemonic="LOAD" code="2"><seqnum space="ram" offset="0x351" uniq="0x0"/><addr space="register" offset="0x288" size="8"/><spaceid name="ram"/><addr space="register" offset="0x20" size="8"/></op>
-<op mnemonic="INT_ADD" code="19"><seqnum space="ram" offset="0x351" uniq="0x1"/><addr space="register" offset="0x20" size="8"/><addr space="register" offset="0x20" size="8"/><addr space="const" offset="0x8" size="8"/></op>
-<op mnemonic="RETURN" code="10"><seqnum space="ram" offset="0x351" uniq="0x2"/><void/><addr space="register" offset="0x288" size="8"/></op>
-
-<!--
 <op mnemonic="INT_ADD" code="19"><seqnum space="ram" offset="0x351" uniq="0x0"/><addr space="unique" offset="0x610" size="8"/><addr space="register" offset="0x28" size="8"/><addr space="const" offset="0xffffffffffffffe8" size="8"/></op>
 <op mnemonic="LOAD" code="2"><seqnum space="ram" offset="0x351" uniq="0x1"/><addr space="unique" offset="0x1ee0" size="8"/><spaceid name="ram"/><addr space="unique" offset="0x610" size="8"/></op>
 <op mnemonic="COPY" code="1"><seqnum space="ram" offset="0x351" uniq="0x2"/><addr space="register" offset="0x38" size="8"/><addr space="unique" offset="0x1ee0" size="8"/></op>
+
 <op mnemonic="INT_SUB" code="20"><seqnum space="ram" offset="0x355" uniq="0x0"/><addr space="register" offset="0x20" size="8"/><addr space="register" offset="0x20" size="8"/><addr space="const" offset="0x8" size="8"/></op>
 <op mnemonic="STORE" code="3"><seqnum space="ram" offset="0x355" uniq="0x1"/><void/><spaceid name="ram"/><addr space="register" offset="0x20" size="8"/><addr space="const" offset="0x35a" size="8"/></op>
 <op mnemonic="CALL" code="7"><seqnum space="ram" offset="0x355" uniq="0x2"/><void/><addr space="ram" offset="0x360" size="8"/></op>
+
 <op mnemonic="INT_CARRY" code="21"><seqnum space="ram" offset="0x35a" uniq="0x0"/><addr space="register" offset="0x200" size="1"/><addr space="register" offset="0x20" size="8"/><addr space="const" offset="0x40" size="8"/></op>
 <op mnemonic="INT_SCARRY" code="22"><seqnum space="ram" offset="0x35a" uniq="0x1"/><addr space="register" offset="0x20b" size="1"/><addr space="register" offset="0x20" size="8"/><addr space="const" offset="0x40" size="8"/></op>
 <op mnemonic="INT_ADD" code="19"><seqnum space="ram" offset="0x35a" uniq="0x2"/><addr space="register" offset="0x20" size="8"/><addr space="register" offset="0x20" size="8"/><addr space="const" offset="0x40" size="8"/></op>
@@ -1182,10 +1208,10 @@ longlonglong</parameter_description>
 
 <op mnemonic="LOAD" code="2"><seqnum space="ram" offset="0x35e" uniq="0x0"/><addr space="register" offset="0x28" size="8"/><spaceid name="ram"/><addr space="register" offset="0x20" size="8"/></op>
 <op mnemonic="INT_ADD" code="19"><seqnum space="ram" offset="0x35e" uniq="0x1"/><addr space="register" offset="0x20" size="8"/><addr space="register" offset="0x20" size="8"/><addr space="const" offset="0x8" size="8"/></op>
+
 <op mnemonic="LOAD" code="2"><seqnum space="ram" offset="0x35f" uniq="0x0"/><addr space="register" offset="0x288" size="8"/><spaceid name="ram"/><addr space="register" offset="0x20" size="8"/></op>
 <op mnemonic="INT_ADD" code="19"><seqnum space="ram" offset="0x35f" uniq="0x1"/><addr space="register" offset="0x20" size="8"/><addr space="register" offset="0x20" size="8"/><addr space="const" offset="0x8" size="8"/></op>
 <op mnemonic="RETURN" code="10"><seqnum space="ram" offset="0x35f" uniq="0x2"/><void/><addr space="register" offset="0x288" size="8"/></op>
--->
 </basicblock>
 </function_description>
 <function_description>
