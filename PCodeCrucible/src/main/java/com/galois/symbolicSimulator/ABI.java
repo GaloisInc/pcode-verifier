@@ -20,8 +20,10 @@ public abstract class ABI {
     public abstract int getAddrBytes();
     public long getAddrWidth() { return getAddrBytes() * 8; }
 
-    public abstract BigInteger argumentRegister( int i );
-    public abstract BigInteger returnRegister( int i );
+    public abstract BigInteger argumentRegister( int i )
+        throws Exception;
+    public abstract BigInteger returnRegister( int i )
+        throws Exception;
     public abstract BigInteger stackRegister();
     public abstract BigInteger frameRegister();
 
