@@ -56,8 +56,9 @@ class CrucibleMain {
             MachineState machine = new MachineState( sim, translator.getProc(), prog, abi );
 
             //testEx( sim, machine );
-            testS20_expand32( sim, machine );
+            //testS20_expand32( sim, machine );
             //testS20_hash( sim, machine );
+            testS20_crypt32( sim, machine );
 
             //testLFSR( sim, machine );
             //testFirstZero( sim, machine );
@@ -189,9 +190,8 @@ class CrucibleMain {
         int mnum = 16;
 
         SimulatorValue karg = machine.makeWord( 0x7000l );
-        SimulatorValue narg = machine.makeWord( 0x7100l );
-        SimulatorValue marg = machine.makeWord( 0x7200l );
-
+        SimulatorValue narg = machine.makeWord( 0x8000l );
+        SimulatorValue marg = machine.makeWord( 0x9000l );
 
         SimulatorValue key   = sim.freshConstant( VarType.vector( knum, VarType.bitvector(8) ) );
         SimulatorValue nonce = sim.freshConstant( VarType.vector( nnum, VarType.bitvector(8) ) );
@@ -224,6 +224,9 @@ class CrucibleMain {
                                   marg,
                                   machine.makeWord( mnum )
                                 );
+
+        System.out.println( "finalpc: " + machine.currentPC ); // should be retAddr
+        System.out.println( "result: " + result );
 
         SimulatorValue[] outputs = new SimulatorValue[mnum];
         for( int i = 0; i < mnum; i++ ) {
