@@ -124,6 +124,10 @@ class PCodeTranslator {
                     // scope across an entire basic block...
                     temps.clearRegisters();
                 }
+            } else if ( isIntrinsic( fn.name ) ) {
+                System.out.println( "Implementing intrinsic: " + fn.name + " 0x" + fn.macroEntryPoint.offset.toString(16) );
+                Block bb = fetchBB( fn.macroEntryPoint.offset );
+                implementIntrinsic( fn.name, bb );
             } else {
                 Block bb = fetchBB( fn.macroEntryPoint.offset );
                 System.out.println( "UNIMPLEMENTED: " + fn.name + " 0x" + fn.macroEntryPoint.offset.toString(16) );
@@ -134,9 +138,9 @@ class PCodeTranslator {
                     Expr regs  = bb.read(registerFile);
                     Expr ram   = bb.read(ramReg);
                     Expr ret   = bb.structLiteral( pc, regs, ram );
+                    bb.print( "WARNING: Exiting on call to unimplemented function: " + fn.name + "\n" );
                     bb.returnExpr( ret );
                 }
-
             }
         }
 
@@ -214,6 +218,97 @@ class PCodeTranslator {
             blockMap.put( offset, bb );
         }
         return bb;
+    }
+
+    // FIXME, this implementation of memset makes a number of assumptions that are platform specific
+    // 1) The name '_memset' is produced by clang on OSX
+    // 2) This code assumes the stack grows downward
+
+    public boolean isIntrinsic( String nm ) {
+        return ( nm.equals( "_memset" ) );
+    }
+
+    public void implementIntrinsic( String nm, Block bb )
+        throws Exception
+    {
+        if( nm.equals ("_memset") ) {
+            Block body_block = proc.newBlock();
+            body_block.block_description = "memset loop body";
+            Block test_block = proc.newBlock();
+            test_block.block_description = "memset loop test";
+            Block exit_block = proc.newBlock();
+            exit_block.block_description = "memset function epilogue";
+
+            Reg idxReg  = proc.newReg( Type.bitvector( abi.getAddrWidth() ) );
+            Reg endReg  = proc.newReg( Type.bitvector( abi.getAddrWidth() ) );
+            Reg byteReg = proc.newReg( Type.bitvector( 8 ) );
+
+            RAMAddrSpace ram = (RAMAddrSpace) addrSpaces.get( "ram" );
+            AddrSpaceManager regs = addrSpaces.get( "register" );
+
+            {   // Function entry
+
+                // Grab the function inputs
+                Expr addr = regs.loadDirect( bb, abi.argumentRegister( 0 ), abi.getAddrBytes() );
+                Expr b    = regs.loadDirect( bb, abi.argumentRegister( 1 ), abi.getAddrBytes() );
+                Expr n    = regs.loadDirect( bb, abi.argumentRegister( 2 ), abi.getAddrBytes() );
+
+                // Store the result value for later
+                regs.storeDirect( bb, abi.returnRegister( 0 ), abi.getAddrBytes(), addr );
+
+                // truncate the byte value to write
+                b = bb.bvTrunc( b, 8 );
+
+                // set initial values for the internal crucible registers
+                bb.write( idxReg, addr );
+                bb.write( byteReg, b );
+                // end <- addr + n
+                bb.write( endReg, bb.bvAdd( addr, n ) );
+                bb.jump( test_block );
+            }
+
+            {   // Loop test
+
+                // loop while idx < end
+                Expr idx = test_block.read( idxReg );
+                Expr end = test_block.read( endReg );
+                Expr test = test_block.bvUlt( idx, end );
+                test_block.branch( test, body_block, exit_block );
+            }
+
+            {   // Loop body
+                Expr idx = body_block.read( idxReg );
+                Expr b   = body_block.read( byteReg );
+
+                // write the byte into memory
+                ram.poke( body_block, idx, 1, b );
+
+                // increment the index
+                idx = body_block.bvAdd( idx, body_block.bvLiteral( abi.getAddrWidth(), 0x1 ) );
+                body_block.write( idxReg, idx );
+
+                body_block.jump( test_block );
+            }
+
+            {   // Function exit
+                Expr stackVal = regs.loadDirect( exit_block, abi.stackRegister(), abi.getAddrBytes() );
+
+                // read the return value
+                Expr retVal   = ram.peek( exit_block, stackVal, abi.getAddrBytes() );
+
+                // pop the stack
+                stackVal = exit_block.bvAdd( stackVal, exit_block.bvLiteral( abi.getAddrWidth(), abi.getAddrBytes() ) );
+                regs.storeDirect( exit_block, abi.stackRegister(), abi.getAddrBytes(), stackVal );
+
+                // return
+                exit_block.write( trampolinePC, retVal );
+                exit_block.jump( trampoline );
+            }
+
+            return;
+        }
+
+        throw new Exception("Unknown intrinsic: " + nm) ;
     }
 
     void visitPCodeBlock( PCodeFunction fn, PCodeBasicBlock pcode_bb )  throws Exception {

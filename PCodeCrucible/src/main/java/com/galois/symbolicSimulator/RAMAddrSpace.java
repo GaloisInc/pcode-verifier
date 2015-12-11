@@ -168,4 +168,20 @@ public final class RAMAddrSpace extends AddrSpaceManager {
         ram = storeRAM( bb, ram, baseAddr, size, e );
         bb.write(ramReg, ram);
     }
+
+
+    public Expr peek( Block bb, Expr addr, int size )
+        throws Exception
+    {
+        Expr ram = bb.read(ramReg);
+        return loadRAM( bb, ram, addr, size );
+    }
+
+    public void poke( Block bb, Expr addr, int size, Expr e )
+        throws Exception
+    {
+        Expr ram = bb.read(ramReg);
+        ram = storeRAM( bb, ram, addr, size, e );
+        bb.write(ramReg, ram);
+    }
 }
