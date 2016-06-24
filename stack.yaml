@@ -1,7 +1,11 @@
 flags: {}
+extra-lib-dirs:
+  - /usr/local/lib
+
 packages:
 - ../mss/crucible
 - ../mss/crucible-abc
+- ../mss/crucible-blt
 - ../mss/crucible-saw
 - ../mss/crucible-server
 - ../mss/galois-matlab
@@ -11,8 +15,9 @@ packages:
 - ../parameterized-utils
 - ../saw-core
 extra-deps:
-- bimap-0.3.1
+- clock-0.5.2
+- dotgen-0.4.2
+- fgl-visualize-0.1.0.1
 - llvm-pretty-0.4.0.1
 - llvm-pretty-bc-parser-0.2.1.0
-- sbv-5.6
-resolver: lts-3.3
+resolver: lts-5.3
