@@ -1,0 +1,14 @@
+1) Inputs to drive to some program point
+2) Inputs to achieve some output
+3) Functional verification (pre/post conditions)
+4*) equivalence checking
+5) Safety invariants
+6) subexpression replacements with equivalence checking for correctness
+7) "superuser" mode with direct crucible integration
+8) assertions
+9*) produce SAW core / feed into SAW
+10) Symbolic debugger
+11) Concrete execution / debugger
+
+
+* = of particular interest to R2
