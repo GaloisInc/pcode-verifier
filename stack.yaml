@@ -8,7 +8,7 @@ packages:
 - ../mss/crucible-blt
 - ../mss/crucible-saw
 - ../mss/crucible-server
-- ../mss/galois-matlab
+- ../mss/matlab-data
 - ../abcBridge
 - ../aig
 - ../hpb
