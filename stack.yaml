@@ -3,12 +3,12 @@ extra-lib-dirs:
   - /usr/local/lib
 
 packages:
-- ../mss/crucible
-- ../mss/crucible-abc
-- ../mss/crucible-blt
-- ../mss/crucible-saw
-- ../mss/crucible-server
-- ../mss/matlab-data
+- ../crucible-public/crucible
+- ../crucible-public/crucible-abc
+- ../crucible-public/crucible-blt
+- ../crucible-public/crucible-saw
+- ../crucible-public/crucible-server
+- ../crucible-public/galois-matlab
 - ../abcBridge
 - ../aig
 - ../hpb
