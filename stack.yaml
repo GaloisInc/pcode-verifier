@@ -5,7 +5,6 @@ extra-lib-dirs:
 packages:
 - ../mss/crucible
 - ../mss/crucible-abc
-- ../mss/crucible-blt
 - ../mss/crucible-saw
 - ../mss/crucible-server
 - ../mss/matlab-data
