@@ -15,11 +15,11 @@ uses Maven to build the Java pieces; Google's protocol buffer compiler
 will also need to be installed.  The following configurations are
 expected to work:
 
-* OSX "Yosemite" 10.10.3 or Debian GNU/Linux 3.14.15-2
-* GHC 7.8.3 or GHC 7.10.1
-* stack 0.1.2
+* OSX "El Capitan" 10.11.6 or Debian GNU/Linux 3.14.15-2
+* GHC 7.8.3 or GHC 7.10.3
+* stack 1.0.2
 * Java 1.6.0 u45
-* Maven 3.0.5
+* Maven 3.2.5
 * Google Protobuf 2.6.1
 
 Note: the 'protoc' compiler must be in your PATH; or, you may edit
