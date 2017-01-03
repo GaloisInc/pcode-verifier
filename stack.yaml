@@ -1,6 +1,7 @@
 flags: {}
 extra-lib-dirs:
   - /usr/local/lib
+compiler-check: newer-minor
 
 packages:
 - ../mss/crucible
