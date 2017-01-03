@@ -27,7 +27,6 @@ class CrucibleMain {
         // Simulator.extraLocalCommandArguments.add( "-P -hc" );
         // Simulator.extraLocalCommandArguments.add( "-RTS" );
 
-
         // Connect to the crucible server
         //SimpleSimulator sim = SimpleSimulator.launchLocal(crucibleServerPath);
         SAWSimulator sim = SAWSimulator.launchLocal(crucibleServerPath);
@@ -113,7 +112,7 @@ class CrucibleMain {
         // set up the stack register(s)
         machine.initStack( BigInteger.valueOf( 0x4000l ) );
 
-        SimulatorValue result = machine.callFunction( retAddr, "_s20_hash", arg );
+        SimulatorValue result = machine.callFunction( retAddr, "s20_hash", arg );
 
         SimulatorValue[] outputs = new SimulatorValue[how_many];
         for( int i = 0; i < how_many; i++ ) {
@@ -217,7 +216,7 @@ class CrucibleMain {
         machine.initStack( BigInteger.valueOf( 0x4000l ) );
 
         SimulatorValue result =
-            machine.callFunction( retAddr, "_s20_crypt32",
+            machine.callFunction( retAddr, "s20_crypt32",
                                   karg,
                                   narg,
                                   machine.makeWord( 0 ),

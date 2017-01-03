@@ -426,6 +426,9 @@ class PCodeTranslator {
             bb.setCurrentPosition( pos );
         }
 
+        // Debugging information
+        // curr_bb.print("Executing instruction at: " + o.offset.toString(16) + "\n" );
+
         switch( o.opcode ) {
         case COPY:
             e = getInput( o.input0 );
@@ -466,6 +469,10 @@ class PCodeTranslator {
             // from our current offset, then the CBRANCH is the final microinstruction of
             // at that offset, and we instead need to fetch the block corresponding to the offset
             // of the following instruction.
+
+            // Debugging information
+            // curr_bb.print("Conditional branch at: " + o.offset.toString(16) + "\n" );
+
             if( nextop.offset.equals( o.offset ) ) {
                 Block next = proc.newBlock();
                 next.block_description = "PCode internal block 0x" + nextop.offset.toString( 16 ) + " " + nextop.uniq;
