@@ -111,6 +111,7 @@ public class ARM extends ABI {
     public RegisterAddrSpace getRegisters() { return regs; }
 
     public BigInteger argumentRegister( int i )
+        throws Exception
     {
         switch( i  ) {
         case 0:
@@ -123,10 +124,11 @@ public class ARM extends ABI {
             return r3;
         }
 
-        return null;
+        throw new Exception("Ran out of argument registers: " + i);
     }
 
     public BigInteger returnRegister( int i )
+        throws Exception
     {
         switch( i  ) {
         case 0:
@@ -135,7 +137,7 @@ public class ARM extends ABI {
             return r1;
         }
 
-        return null;
+        throw new Exception("Ran out of return registers: " + i);
     }
 
     public BigInteger stackRegister()
