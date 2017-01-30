@@ -1,3 +1,14 @@
+<!-- NOTE NOTE NOTE!
+
+This version of the salsa20 algorithm contains a subtle relocation bug that causes
+the salsa20 encryption function to compute incorrect values.  This bug is due to
+an upstream problem with the Ghidra code that resolves symbols.  This bug has been
+reported upstream and has been fixed (I think).
+
+See instead the `salsa20-fix.xml` file for a manually fixed version of this algorithm.
+
+--> 
+
 <executable>
 <wordSize bits="64"/>
 <endian isBigEndian="false"/>
