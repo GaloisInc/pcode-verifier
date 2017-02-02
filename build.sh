@@ -18,7 +18,7 @@
 set -e
 
 # GitHub repos (some private, some public) required by the build
-REPO_LIST="abcBridge aig hpb parameterized-utils mss saw-core buffer-builder"
+REPO_LIST="llvm-pretty abcBridge aig hpb parameterized-utils crucible saw-core buffer-builder"
 
 # base GitHub URL for Galois repos
 GITHUB_URL="git@github.com:GaloisInc"
@@ -63,7 +63,7 @@ echo "** Building PCode parser **"
 (cd JavaParser; mvn install)
 
 echo "** Building Crucible Java API **"
-(cd $EXT/mss/crucible-server/java_api; mvn -DcrucibleHome="${STACK_INSTALL}" install)
+(cd $EXT/crucible/crucible-server/java_api; mvn -DcrucibleHome="${STACK_INSTALL}" install)
 
 echo "** Building PCode<->Crucible bridge **"
 (cd PCodeCrucible; mvn -DcrucibleHome="${STACK_INSTALL}" install)
