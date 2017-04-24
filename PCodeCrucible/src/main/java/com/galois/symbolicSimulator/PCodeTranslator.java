@@ -6,7 +6,7 @@ import java.util.*;
 import com.galois.crucible.*;
 import com.galois.crucible.cfg.*;
 
-class PCodeTranslator {
+public class PCodeTranslator {
     // how many bits are stored in an individual memory cell
     public static final long cellWidth = 8;
 
@@ -797,13 +797,21 @@ class PCodeTranslator {
         case INT2FLOAT:
         case FLOAT2FLOAT:
         case TRUNC:
-            throw new Exception("Floating point instructions not yet supported:" + o.toString() );
+            {
+            final String msg = "Floating point instructions not yet supported:" + o.toString();
+            bb.assertCond(BoolValue.FALSE, new StringValue(msg));
+            }
+            break;
 
         case MULTIEQUAL:
         case INDIRECT:
         case PTRADD:
         default:
-            throw new Exception("Unsupported instruction " + o.toString() );
+            {
+            final String msg = "Unsupported instruction " + o.toString();
+            bb.assertCond(BoolValue.FALSE, new StringValue(msg));
+            break;
+            }
         }
     }
 

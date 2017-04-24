@@ -22,6 +22,10 @@ public class PCodeProgram {
 		varnodes = new ArrayList<Varnode>();
 	}
 	
+	public PCodeArchSpec getArchSpec() {
+		return archSpec;
+        }
+	
         public Collection<PCodeFunction> getFunctions() {
 	    return functions.values();
 	}

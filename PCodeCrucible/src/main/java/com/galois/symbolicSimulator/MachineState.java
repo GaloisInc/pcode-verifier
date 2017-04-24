@@ -6,7 +6,7 @@ import java.util.*;
 import com.galois.crucible.*;
 import com.galois.crucible.cfg.*;
 
-class MachineState {
+public class MachineState {
     Simulator sim;
     Procedure proc;
     PCodeProgram prog;
