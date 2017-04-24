@@ -17,8 +17,8 @@ packages:
 - ../saw-core
 - ../buffer-builder
 extra-deps:
-- clock-0.5.2
+- clock-0.7.2
 - dotgen-0.4.2
 - fgl-visualize-0.1.0.1
-- llvm-pretty-bc-parser-0.3.0.0
-resolver: lts-6.26
+- llvm-pretty-bc-parser-0.3.2.0
+resolver: lts-8.12
