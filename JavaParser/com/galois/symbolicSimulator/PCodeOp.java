@@ -9,6 +9,7 @@ public class PCodeOp {
 	Varnode input0 = null;
 	Varnode output = null;
 	Varnode input1 = null;
+	Varnode input2 = null;
 	BigInteger offset;
 	int uniq;
 	boolean blockStart = false;
@@ -23,11 +24,12 @@ public class PCodeOp {
 		output = o;		
 	}
 
-        public PCodeOp(PCodeOpCode code, String sid, Varnode o, Varnode i0, Varnode i1, BigInteger off, int u, boolean firstInBlock, boolean firstInFunc, PCodeFunction func) {
+        public PCodeOp(PCodeOpCode code, String sid, Varnode o, Varnode i0, Varnode i1, Varnode i2, BigInteger off, int u, boolean firstInBlock, boolean firstInFunc, PCodeFunction func) {
 		opcode = code;
 		space_id = sid;
 		input0 = i0;
 		input1 = i1;
+		input2 = i2;
 		output = o;
 		offset = off;
 		uniq = u;
@@ -99,7 +101,8 @@ public class PCodeOp {
 		FLOAT_DIV, FLOAT_NEG, FLOAT_ABS, FLOAT_SQRT, FLOAT_CEIL, FLOAT_FLOOR, FLOAT_ROUND, 
 		FLOAT_UNORDERED, FLOAT_NAN, 
 		INT2FLOAT, FLOAT2FLOAT, TRUNC,
-		MULTIEQUAL, INDIRECT, PTRADD 
+		MULTIEQUAL, INDIRECT, PTRADD,
+        CALLOTHER
 	}
 	
 	int numArgs() {

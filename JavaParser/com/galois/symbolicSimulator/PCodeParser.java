@@ -260,7 +260,7 @@ public class PCodeParser {
 		String opcode = op.getAttribute("mnemonic");
 		String space_id = null;
 		NodeList argNodes = op.getChildNodes();
-		Varnode[] args = new Varnode[3];
+		Varnode[] args = new Varnode[4];
 		BigInteger offset = null;
 		int uniq = -1;
 
@@ -272,6 +272,9 @@ public class PCodeParser {
 				Element argE = (Element) argNode;
 				String argTag = argE.getNodeName();
 				if (argTag.equals("addr")) {
+					if (argi >= args.length) {
+						throw new Error("Too many arguments");
+					}
 					args[argi++] = parseVarnode(argE);
 				} else if (argTag.equals("seqnum")) {
 					uniq = Integer.decode(argE.getAttribute("uniq"));
@@ -290,7 +293,7 @@ public class PCodeParser {
 		}
 
 		PCodeOp ret = new PCodeOp(PCodeOp.PCodeOpCode.valueOf(opcode),
-					  space_id, args[0], args[1], args[2],
+					  space_id, args[0], args[1], args[2], args[3],
 					  offset, uniq, firstInBlock, firstInFunction, f);
 		ret.loc = getLoc( op );
 
