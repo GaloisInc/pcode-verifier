@@ -21,4 +21,5 @@ extra-deps:
 - dotgen-0.4.2
 - fgl-visualize-0.1.0.1
 - llvm-pretty-bc-parser-0.3.2.0
+- th-abstraction-0.1.0.0
 resolver: lts-8.12
