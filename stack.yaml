@@ -10,6 +10,10 @@ packages:
 - ../crucible/crucible-saw
 - ../crucible/crucible-server
 - ../crucible/galois-matlab
+- ../cryptol
+- ../cryptol-verifier
+- ../saw-core-aig
+- ../saw-core-sbv
 - ../abcBridge
 - ../aig
 - ../hpb
@@ -22,4 +26,6 @@ extra-deps:
 - fgl-visualize-0.1.0.1
 - llvm-pretty-bc-parser-0.3.2.0
 - th-abstraction-0.1.0.0
-resolver: lts-8.12
+- sbv-6.1
+- simple-smt-0.7.0
+resolver: lts-8.18

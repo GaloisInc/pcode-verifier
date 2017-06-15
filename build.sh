@@ -18,7 +18,9 @@
 set -e
 
 # GitHub repos (some private, some public) required by the build
-REPO_LIST="llvm-pretty abcBridge aig hpb parameterized-utils crucible saw-core buffer-builder"
+REPO_LIST="llvm-pretty abcBridge aig hpb parameterized-utils crucible \
+           saw-core buffer-builder cryptol-verifier saw-core-aig saw-core-sbv \
+           cryptol"
 
 # base GitHub URL for Galois repos
 GITHUB_URL="git@github.com:GaloisInc"

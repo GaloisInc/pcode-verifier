@@ -260,11 +260,10 @@ public class PCodeParser {
 		String opcode = op.getAttribute("mnemonic");
 		String space_id = null;
 		NodeList argNodes = op.getChildNodes();
-		Varnode[] args = new Varnode[4];
+		ArrayList<Varnode> args = new ArrayList<Varnode>();
 		BigInteger offset = null;
 		int uniq = -1;
 
-		int argi = 0;
 		for (int i = 0; i < argNodes.getLength(); i++) {
 			Node argNode = argNodes.item(i);
 			if (argNode instanceof Element) {
@@ -272,16 +271,13 @@ public class PCodeParser {
 				Element argE = (Element) argNode;
 				String argTag = argE.getNodeName();
 				if (argTag.equals("addr")) {
-					if (argi >= args.length) {
-						throw new Error("Too many arguments");
-					}
-					args[argi++] = parseVarnode(argE);
+					args.add(parseVarnode(argE));
 				} else if (argTag.equals("seqnum")) {
 					uniq = Integer.decode(argE.getAttribute("uniq"));
 					offset = parseBigHex(argE.getAttribute("offset"));
 				} else if (argTag.equals("void")){
 				        // skip a slot when we encounter the void tag
-   				        argi++;
+   				        args.add(null);
 					continue;
 				} else if (argTag.equals("spaceid")){
 				        space_id = argE.getAttribute("name");
@@ -292,8 +288,12 @@ public class PCodeParser {
 			}
 		}
 
+		final Varnode arg0 = args.size() > 0 ? args.get(0) : null;
+		final Varnode arg1 = args.size() > 1 ? args.get(1) : null;
+		final Varnode arg2 = args.size() > 2 ? args.get(2) : null;
+
 		PCodeOp ret = new PCodeOp(PCodeOp.PCodeOpCode.valueOf(opcode),
-					  space_id, args[0], args[1], args[2], args[3],
+					  space_id, arg0, arg1, arg2,
 					  offset, uniq, firstInBlock, firstInFunction, f);
 		ret.loc = getLoc( op );
 
