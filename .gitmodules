@@ -1,0 +1,36 @@
+[submodule "dependencies/llvm-pretty"]
+	path = dependencies/llvm-pretty
+	url = git@github.com:elliottt/llvm-pretty
+[submodule "dependencies/abcBridge"]
+	path = dependencies/abcBridge
+	url = git@github.com:GaloisInc/abcBridge
+[submodule "dependencies/aig"]
+	path = dependencies/aig
+	url = git@github.com:GaloisInc/aig
+[submodule "dependencies/hpb"]
+	path = dependencies/hpb
+	url = git@github.com:GaloisInc/hpb
+[submodule "dependencies/parameterized-utils"]
+	path = dependencies/parameterized-utils
+	url = git@github.com:GaloisInc/parameterized-utils
+[submodule "dependencies/crucible"]
+	path = dependencies/crucible
+	url = git@github.com:GaloisInc/crucible
+[submodule "dependencies/saw-core"]
+	path = dependencies/saw-core
+	url = git@github.com:GaloisInc/saw-core
+[submodule "dependencies/cryptol"]
+	path = dependencies/cryptol
+	url = git@github.com:GaloisInc/cryptol
+[submodule "dependencies/cryptol-verifier"]
+	path = dependencies/cryptol-verifier
+	url = git@github.com:GaloisInc/cryptol-verifier
+[submodule "dependencies/saw-core-aig"]
+	path = dependencies/saw-core-aig
+	url = git@github.com:GaloisInc/saw-core-aig
+[submodule "dependencies/saw-core-sbv"]
+	path = dependencies/saw-core-sbv
+	url = git@github.com:GaloisInc/saw-core-sbv
+[submodule "dependencies/llvm-pretty-bc-parser"]
+	path = dependencies/llvm-pretty-bc-parser
+	url = git@github.com:GaloisInc/llvm-pretty-bc-parser

@@ -17,37 +17,9 @@
 
 set -e
 
-# GitHub repos (some private, some public) required by the build
-REPO_LIST="llvm-pretty abcBridge aig hpb parameterized-utils crucible \
-           saw-core buffer-builder cryptol-verifier saw-core-aig saw-core-sbv \
-           cryptol"
-
-# base GitHub URL for Galois repos
-GITHUB_URL="git@github.com:GaloisInc"
-
-# where we clone external dependencies
-EXT='..'
-
-# Download GitHub repos
-for repo in $REPO_LIST
-do
-  if [ ! -d "$EXT/$repo" ]; then
-      pushd $EXT
-      git clone ${GITHUB_URL}/${repo}.git
-      if [ $? -ne 0 ]; then
-          echo "\n\nFailed to clone private GitHub repos. Please check your \
-                ssh keys to make sure you are authorized for the Galois GitHub \
-                account"
-          exit 1
-      fi
-      popd
-  else
-      pushd "$EXT/$repo"
-      git pull
-      popd
-  fi
-done
-
+# Update submodules
+git submodule init
+git submodule update
 
 echo "** Installing GHC if needed. **"
 stack setup
@@ -65,7 +37,7 @@ echo "** Building PCode parser **"
 (cd JavaParser; mvn install)
 
 echo "** Building Crucible Java API **"
-(cd $EXT/crucible/crucible-server/java_api; mvn -DcrucibleHome="${STACK_INSTALL}" install)
+(cd dependencies/crucible/crucible-server/java_api; mvn -DcrucibleHome="${STACK_INSTALL}" install)
 
 echo "** Building PCode<->Crucible bridge **"
 (cd PCodeCrucible; mvn -DcrucibleHome="${STACK_INSTALL}" install)

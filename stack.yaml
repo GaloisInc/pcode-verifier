@@ -4,28 +4,28 @@ extra-lib-dirs:
 compiler-check: newer-minor
 
 packages:
-- ../llvm-pretty
-- ../crucible/crucible
-- ../crucible/crucible-abc
-- ../crucible/crucible-saw
-- ../crucible/crucible-server
-- ../crucible/galois-matlab
-- ../cryptol
-- ../cryptol-verifier
-- ../saw-core-aig
-- ../saw-core-sbv
-- ../abcBridge
-- ../aig
-- ../hpb
-- ../parameterized-utils
-- ../saw-core
-- ../buffer-builder
+- dependencies/llvm-pretty
+- dependencies/llvm-pretty-bc-parser
+- dependencies/crucible/crucible
+- dependencies/crucible/crucible-abc
+- dependencies/crucible/crucible-saw
+- dependencies/crucible/crucible-server
+- dependencies/crucible/galois-matlab
+- dependencies/cryptol
+- dependencies/cryptol-verifier
+- dependencies/saw-core-aig
+- dependencies/saw-core-sbv
+- dependencies/abcBridge
+- dependencies/aig
+- dependencies/hpb
+- dependencies/parameterized-utils
+- dependencies/saw-core
 extra-deps:
+- buffer-builder-0.2.4.4
 - clock-0.7.2
 - dotgen-0.4.2
 - fgl-visualize-0.1.0.1
-- llvm-pretty-bc-parser-0.3.2.0
 - th-abstraction-0.1.0.0
-- sbv-6.1
+- sbv-7.2
 - simple-smt-0.7.0
 resolver: lts-8.18
