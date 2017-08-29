@@ -12,20 +12,21 @@ The overall system consists of sevaral pieces:
 The included 'build.sh' script will compile and assemble the various pieces.
 It assumes stack is avalaible to build the Haskell code, and
 uses Maven to build the Java pieces; Google's protocol buffer compiler
-will also need to be installed.  The following configurations are
-expected to work:
+will also need to be installed.  However, stack will manage the GHC
+version, and it does not need to be installed separately.
 
-* OSX "El Capitan" 10.11.6 or Debian GNU/Linux 3.14.15-2
-* GHC 7.8.3 or GHC 7.10.3
-* stack 1.0.2
-* Java 1.6.0 u45
-* Maven 3.2.5
-* Google Protobuf 2.6.1
+The following configurations are expected to work:
+
+* OSX "Sierra" 10.12.6 or Debian GNU/Linux 3.14.15-2
+* GHC 8.0.1
+* stack 1.5.1
+* Java 1.7.0
+* Maven 3.5.0
+* Google Protobuf 3.4
 
 Note: the 'protoc' compiler must be in your PATH; or, you may edit
 'mss/crucible-server/java_api/pom.xml' to give the path to protoc explicitly.
 
-NOTE: We have recentely switched to using Stack to build this project.
 Stack is a new build tool for Haskell projects that greatly simplifies
 the building of complicated systems.  Get it at:
   https://github.com/commercialhaskell/stack/wiki/Downloads
