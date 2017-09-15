@@ -69,17 +69,17 @@ public class PCodeTranslator {
         this.callSiteOverrides = Collections.emptyMap();
     }
 
-    public void setCallSiteOverrides(Map<BigInteger, FunctionHandle> overrides) {
+    public void setCallSiteOverrides( Map<BigInteger, FunctionHandle> overrides ) {
         this.callSiteOverrides = overrides;
     }
 
-    public List<BigInteger> getCallSitesForFunction(BigInteger functionAddress) {
+    public List<BigInteger> getCallSitesForFunction( BigInteger functionAddress ) {
         ArrayList<BigInteger> offsets = new ArrayList<BigInteger>();
-        for(PCodeOp op : prog.codeSegment.microOps) {
-            if((op.opcode == PCodeOp.PCodeOpCode.CALL || op.opcode == PCodeOp.PCodeOpCode.BRANCH)
+        for( PCodeOp op : prog.codeSegment.microOps ) {
+            if( ( op.opcode == PCodeOp.PCodeOpCode.CALL || op.opcode == PCodeOp.PCodeOpCode.BRANCH )
                && op.input0.offset.equals(functionAddress))
             {
-                    offsets.add(op.offset);
+                    offsets.add( op.offset );
             }
         }
         return offsets;
@@ -460,16 +460,16 @@ public class PCodeTranslator {
 
         case BRANCH:
         case CALL: {
-            FunctionHandle fh = callSiteOverrides.get(o.offset);
+            FunctionHandle fh = callSiteOverrides.get( o.offset );
 
-            if(fh == null) {
-                Block tgt = fetchBB(o.input0.offset);
+            if( fh == null ) {
+                Block tgt = fetchBB( o.input0.offset );
                 // Debugging information
                 // curr_bb.print("Unconditional branch to: " + o.input0.offset.toString(16) + "\n" );
-                curr_bb.jump(tgt);
+                curr_bb.jump( tgt );
                 curr_bb = null;
             } else {
-                curr_bb.callHandle(fh, abi.getRegisters(), abi.getRAM(), microPC);
+                curr_bb.callHandle( fh, abi.getRegisters(), abi.getRAM(), microPC );
             }
             break;
         }
