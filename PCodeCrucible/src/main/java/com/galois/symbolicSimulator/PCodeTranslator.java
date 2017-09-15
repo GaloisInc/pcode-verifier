@@ -76,8 +76,10 @@ public class PCodeTranslator {
     public List<BigInteger> getCallSitesForFunction(BigInteger functionAddress) {
         ArrayList<BigInteger> offsets = new ArrayList<BigInteger>();
         for(PCodeOp op : prog.codeSegment.microOps) {
-            if(op.opcode == PCodeOp.PCodeOpCode.CALL || op.opcode == PCodeOp.PCodeOpCode.BRANCH) {
-                offsets.add(op.offset);
+            if((op.opcode == PCodeOp.PCodeOpCode.CALL || op.opcode == PCodeOp.PCodeOpCode.BRANCH)
+               && op.input0.offset.equals(functionAddress))
+            {
+                    offsets.add(op.offset);
             }
         }
         return offsets;
