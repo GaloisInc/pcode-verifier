@@ -49,14 +49,12 @@ public class PCodeTranslator {
     // Path name to use for source positions
     String loc_path;
 
+    // Function call site overrides
+    Map<BigInteger, FunctionHandle> callSiteOverrides;
+
     public PCodeTranslator( Simulator sim, PCodeProgram prog, ABI abi, String procName )
     {
-        this.sim = sim;
-        this.prog = prog;
-        this.abi = abi;
-        this.byteWidth = abi.getAddrBytes();
-        this.addrWidth = abi.getAddrWidth();
-        this.procName = procName;
+        this(sim, prog, abi, procName, null);
     }
 
     public PCodeTranslator( Simulator sim, PCodeProgram prog, ABI abi, String procName, String loc_path )
@@ -68,6 +66,21 @@ public class PCodeTranslator {
         this.addrWidth = abi.getAddrWidth();
         this.procName = procName;
         this.loc_path = loc_path;
+        this.callSiteOverrides = Collections.emptyMap();
+    }
+
+    public void setCallSiteOverrides(Map<BigInteger, FunctionHandle> overrides) {
+        this.callSiteOverrides = overrides;
+    }
+
+    public List<BigInteger> getCallSitesForFunction(BigInteger functionAddress) {
+        ArrayList<BigInteger> offsets = new ArrayList<BigInteger>();
+        for(PCodeOp op : prog.codeSegment.microOps) {
+            if(op.opcode == PCodeOp.PCodeOpCode.CALL || op.opcode == PCodeOp.PCodeOpCode.BRANCH) {
+                offsets.add(op.offset);
+            }
+        }
+        return offsets;
     }
 
     public Procedure getProc() throws Exception
@@ -445,13 +458,17 @@ public class PCodeTranslator {
 
         case BRANCH:
         case CALL: {
-            Block tgt = fetchBB( o.input0.offset );
+            FunctionHandle fh = callSiteOverrides.get(o.offset);
 
-            // Debugging information
-            // curr_bb.print("Unconditional branch to: " + o.input0.offset.toString(16) + "\n" );
-
-            curr_bb.jump(tgt);
-            curr_bb = null;
+            if(fh == null) {
+                Block tgt = fetchBB(o.input0.offset);
+                // Debugging information
+                // curr_bb.print("Unconditional branch to: " + o.input0.offset.toString(16) + "\n" );
+                curr_bb.jump(tgt);
+                curr_bb = null;
+            } else {
+                curr_bb.callHandle(fh, abi.getRegisters(), abi.getRAM(), microPC);
+            }
             break;
         }
 
@@ -814,5 +831,4 @@ public class PCodeTranslator {
             }
         }
     }
-
 }
