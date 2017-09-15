@@ -216,7 +216,7 @@ class CrucibleMain {
         machine.initStack( BigInteger.valueOf( 0x4000l ) );
 
         SimulatorValue result =
-            machine.callFunction( retAddr, "_s20_crypt32",
+            machine.callFunction( retAddr, "s20_crypt32",
                                   karg,
                                   narg,
                                   machine.makeWord( 0 ),
