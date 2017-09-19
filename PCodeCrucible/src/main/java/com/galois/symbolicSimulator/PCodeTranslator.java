@@ -486,7 +486,7 @@ public class PCodeTranslator {
                 Expr result = curr_bb.callHandle( fh, pc, reg_read, ram_read);
                 Expr result_pc = curr_bb.structGet( 0, result );
                 Expr result_reg = curr_bb.structGet( 1, result );
-                Expr result_ram = curr_bb.structGet(2, result );
+                Expr result_ram = curr_bb.structGet( 2, result );
 
                 curr_bb.write( reg, result_reg );
                 curr_bb.write( ram, result_ram );
