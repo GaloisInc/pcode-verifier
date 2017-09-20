@@ -467,30 +467,38 @@ public class PCodeTranslator {
 
         case BRANCH:
         case CALL: {
+            // Determine if an override exists for this call site
             FunctionHandle fh = callSiteOverrides.get( o.offset );
 
-            if( fh == null ) {
+            if( fh == null ) {     // Jump normally
                 Block tgt = fetchBB( o.input0.offset );
                 // Debugging information
                 // curr_bb.print("Unconditional branch to: " + o.input0.offset.toString(16) + "\n" );
                 curr_bb.jump( tgt );
                 curr_bb = null;
-            } else {
-
+            } else {               // Execute an override
                 Reg reg = abi.getRegisters().getRegisterFile();
                 Reg ram = abi.getRAM().getRAM();
+
+                // Bundle up the machine state
                 Expr pc = curr_bb.bvLiteral( abi.getAddrWidth(), o.offset );
                 Expr reg_read = curr_bb.read( reg );
                 Expr ram_read = curr_bb.read( ram );
 
+                // Pass machine state to the function override
+                // The result is tuple containing a new machine state
                 Expr result = curr_bb.callHandle( fh, pc, reg_read, ram_read);
+
+                // Get the new machine state as results from function override
                 Expr result_pc = curr_bb.structGet( 0, result );
                 Expr result_reg = curr_bb.structGet( 1, result );
                 Expr result_ram = curr_bb.structGet( 2, result );
 
+                // Set ram and registers to results from function override
                 curr_bb.write( reg, result_reg );
                 curr_bb.write( ram, result_ram );
 
+                // Jump to PC returned by function override
                 indirectJump( o, result_pc );
 
                 curr_bb = null;
