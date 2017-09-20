@@ -480,7 +480,7 @@ public class PCodeTranslator {
                 Reg reg = abi.getRegisters().getRegisterFile();
                 Reg ram = abi.getRAM().getRAM();
 
-                // Bundle up the machine state
+                // Bundle up the machine state (pc, regs, ram)
                 Expr pc = curr_bb.bvLiteral( abi.getAddrWidth(), o.offset );
                 Expr reg_read = curr_bb.read( reg );
                 Expr ram_read = curr_bb.read( ram );
@@ -494,7 +494,7 @@ public class PCodeTranslator {
                 Expr result_reg = curr_bb.structGet( 1, result );
                 Expr result_ram = curr_bb.structGet( 2, result );
 
-                // Set ram and registers to results from function override
+                // Set ram and register state to results from function override
                 curr_bb.write( reg, result_reg );
                 curr_bb.write( ram, result_ram );
 
