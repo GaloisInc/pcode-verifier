@@ -6,6 +6,8 @@ import java.util.*;
 import com.galois.crucible.*;
 import com.galois.crucible.cfg.*;
 
+import com.galois.crucible.proto.Protos;
+
 class CrucibleMain {
 
     public static void main( String[] args ) throws Exception {
@@ -52,12 +54,24 @@ class CrucibleMain {
 
             // Set up the translator and build the Crucible CFG
             PCodeTranslator translator = new PCodeTranslator( sim, prog, abi, "pcodeCFG" );
+
+            // Set up any call site overrides...
+            Map<BigInteger, FunctionHandle> ovrs = new HashMap();
+
+            VerificationHarness testHarness = setupTestHarness();
+            FunctionHandle testOvr = sim.compileHarness( testHarness );
+            ovrs.put( BigInteger.valueOf(0x35l), testOvr );
+
+            translator.setCallSiteOverrides( ovrs );
+
+            // Setup a machine state to execute
             MachineState machine = new MachineState( sim, translator.getProc(), prog, abi );
 
+            testFact( sim, machine );
             //testEx( sim, machine );
             //testS20_expand32( sim, machine );
             //testS20_hash( sim, machine );
-            testS20_crypt32( sim, machine );
+            //testS20_crypt32( sim, machine );
 
             //testLFSR( sim, machine );
             //testFirstZero( sim, machine );
@@ -79,6 +93,35 @@ class CrucibleMain {
             sim.close();
         }
     }
+
+    public static VerificationHarness setupTestHarness()
+    {
+        VerificationHarness harness = new VerificationHarness("testHarness", 64, Protos.Endianness.LittleEndian);
+        Protos.VariableReference x = harness.prestate().addVar( "x", 32 );
+
+        harness.prestate().assignRegister( X86_64.rdi.longValue(), x );
+        harness.prestate().assignRegister( X86_64.rsp.longValue(), harness.stackVar );
+        harness.prestate().assignMemory( VerificationHarness.stackVar, 0x0, harness.returnVar );
+
+        Protos.VariableReference y = harness.poststate().addVar( "y", 32 );
+        harness.poststate().bindVariable( y, "x + 42" );
+        harness.poststate().assignRegister( X86_64.rax.longValue(), y );
+
+        return harness;
+    }
+
+    public static void testFact( SAWSimulator sim, MachineState machine )
+        throws Exception
+    {
+        SimulatorValue retAddr = machine.makeWord( 0xdeadbeefl );
+        machine.initStack( BigInteger.valueOf( 0x4000l ));
+
+        SimulatorValue arg = machine.makeWord( 3 );
+        SimulatorValue result = machine.callFunction( retAddr, "_fact", arg );
+
+        System.out.println( "Result: " + result.toString() );
+        sim.printTerm( result );
+     }
 
     public static void testEx( SAWSimulator sim, MachineState machine )
         throws Exception
@@ -216,7 +259,7 @@ class CrucibleMain {
         machine.initStack( BigInteger.valueOf( 0x4000l ) );
 
         SimulatorValue result =
-            machine.callFunction( retAddr, "s20_crypt32",
+            machine.callFunction( retAddr, "_s20_crypt32",
                                   karg,
                                   narg,
                                   machine.makeWord( 0 ),
