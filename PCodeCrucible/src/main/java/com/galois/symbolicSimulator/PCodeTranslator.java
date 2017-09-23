@@ -49,14 +49,12 @@ public class PCodeTranslator {
     // Path name to use for source positions
     String loc_path;
 
+    // Function call site overrides
+    Map<BigInteger, FunctionHandle> callSiteOverrides;
+
     public PCodeTranslator( Simulator sim, PCodeProgram prog, ABI abi, String procName )
     {
-        this.sim = sim;
-        this.prog = prog;
-        this.abi = abi;
-        this.byteWidth = abi.getAddrBytes();
-        this.addrWidth = abi.getAddrWidth();
-        this.procName = procName;
+        this(sim, prog, abi, procName, null);
     }
 
     public PCodeTranslator( Simulator sim, PCodeProgram prog, ABI abi, String procName, String loc_path )
@@ -68,6 +66,12 @@ public class PCodeTranslator {
         this.addrWidth = abi.getAddrWidth();
         this.procName = procName;
         this.loc_path = loc_path;
+        this.callSiteOverrides = Collections.emptyMap();
+    }
+
+    public void setCallSiteOverrides( Map<BigInteger, FunctionHandle> overrides ) {
+        this.callSiteOverrides = overrides;
+        proc = null; // changing this effectively invalidates proc
     }
 
     public Procedure getProc() throws Exception
@@ -407,6 +411,24 @@ public class PCodeTranslator {
         getSpace( o.output.space_name ).storeDirect( curr_bb, o.output.offset, o.output.size, e );
     }
 
+    private void indirectJump(PCodeOp o, Expr e) {
+        // write the desired jump address to the PC register
+        curr_bb.write( trampolinePC, e );
+
+        // Build a short block that prints a warning before jumping to the trampoline
+        Block warn_blk = proc.newBlock();
+        warn_blk.block_description = "PCode symbolic indirect jump warning block 0x" + o.offset.toString( 16 );
+        warn_blk.print( "WARNING: indirect branch on symbolic value at 0x" + o.offset.toString( 16 ) + "\n" );
+        warn_blk.print( "    This is quite likely to result in nontermination of the symbolic simulator.\n" );
+        warn_blk.jump( trampoline );
+
+        // Figure out if the address to jump to is concrete
+        Expr is_conc = curr_bb.isConcrete( e );
+
+        // Jump directly to trampoline if so, but print a warning if it is symbolic
+        curr_bb.branch( is_conc, trampoline, warn_blk );
+    }
+
     void addOpToBlock( String path, PCodeOp o, int microPC ) throws Exception
     {
         //System.out.println( o.toString() );
@@ -445,13 +467,42 @@ public class PCodeTranslator {
 
         case BRANCH:
         case CALL: {
-            Block tgt = fetchBB( o.input0.offset );
+            // Determine if an override exists for this call site
+            FunctionHandle fh = callSiteOverrides.get( o.offset );
 
-            // Debugging information
-            // curr_bb.print("Unconditional branch to: " + o.input0.offset.toString(16) + "\n" );
+            if( fh == null ) {     // Jump normally
+                Block tgt = fetchBB( o.input0.offset );
+                // Debugging information
+                // curr_bb.print("Unconditional branch to: " + o.input0.offset.toString(16) + "\n" );
+                curr_bb.jump( tgt );
+                curr_bb = null;
+            } else {               // Execute an override
+                Reg reg = abi.getRegisters().getRegisterFile();
+                Reg ram = abi.getRAM().getRAM();
 
-            curr_bb.jump(tgt);
-            curr_bb = null;
+                // Bundle up the machine state (pc, regs, ram)
+                Expr pc = curr_bb.bvLiteral( abi.getAddrWidth(), o.offset );
+                Expr reg_read = curr_bb.read( reg );
+                Expr ram_read = curr_bb.read( ram );
+
+                // Pass machine state to the function override
+                // The result is tuple containing a new machine state
+                Expr result = curr_bb.callHandle( fh, pc, reg_read, ram_read);
+
+                // Get the new machine state as results from function override
+                Expr result_pc = curr_bb.structGet( 0, result );
+                Expr result_reg = curr_bb.structGet( 1, result );
+                Expr result_ram = curr_bb.structGet( 2, result );
+
+                // Set ram and register state to results from function override
+                curr_bb.write( reg, result_reg );
+                curr_bb.write( ram, result_ram );
+
+                // Jump to PC returned by function override
+                indirectJump( o, result_pc );
+
+                curr_bb = null;
+            }
             break;
         }
 
@@ -496,21 +547,8 @@ public class PCodeTranslator {
         case RETURN: {
             e = getInput( o.input0 );
 
-            // write the desired jump address to the PC register
-            curr_bb.write( trampolinePC, e );
+            indirectJump(o, e);
 
-            // Build a short block that prints a warning before jumping to the trampoline
-            Block warn_blk = proc.newBlock();
-            warn_blk.block_description = "PCode symbolic indirect jump warning block 0x" + o.offset.toString( 16 );
-            warn_blk.print( "WARNING: indirect branch on symbolic value at 0x" + o.offset.toString( 16 ) + "\n" );
-            warn_blk.print( "    This is quite likely to result in nontermination of the symbolic simulator.\n" );
-            warn_blk.jump( trampoline );
-
-            // Figure out if the address to jump to is concrete
-            Expr is_conc = curr_bb.isConcrete( e );
-
-            // Jump directly to trampoline if so, but print a warning if it is symbolic
-            curr_bb.branch( is_conc, trampoline, warn_blk );
             curr_bb = null;
             break;
         }
@@ -814,5 +852,4 @@ public class PCodeTranslator {
             }
         }
     }
-
 }
