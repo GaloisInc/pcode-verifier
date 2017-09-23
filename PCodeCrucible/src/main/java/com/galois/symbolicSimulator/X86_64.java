@@ -11,7 +11,8 @@ import com.galois.crucible.cfg.*;
 public class X86_64 extends ABI {
     static final int addrWidth = 64;
     static final int addrBytes = 8;
-    static final int regWidth = 14; // number of bits required to address all the registers
+    //static final int regWidth = 14; // number of bits required to address all the registers
+    static final int regWidth = 64; // number of bits required to address all the registers
 
     PCodeArchSpec arch;
     Simulator sim;
@@ -67,6 +68,8 @@ public class X86_64 extends ABI {
         SimulatorValue stk = state.readReg( rsp, addrBytes );
         stk = state.sim.bvSub( stk, state.sim.bvLiteral( addrWidth, bytes ) );
         state.writeReg( rsp, addrBytes, stk );
+
+        // System.out.println( "Pushing to " + stk.toString() + " " + addrBytes );
         state.poke( stk, addrBytes, val );
     }
 
