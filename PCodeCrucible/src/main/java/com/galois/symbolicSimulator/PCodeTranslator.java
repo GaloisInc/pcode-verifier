@@ -485,14 +485,16 @@ public class PCodeTranslator {
                 Expr reg_read = curr_bb.read( reg );
                 Expr ram_read = curr_bb.read( ram );
 
+                System.out.println( "Installing override function: " + o.offset.toString() );
+
                 // Pass machine state to the function override
                 // The result is tuple containing a new machine state
-                Expr result = curr_bb.callHandle( fh, pc, reg_read, ram_read);
+                Expr result = curr_bb.callHandle( fh, reg_read, ram_read, pc);
 
                 // Get the new machine state as results from function override
-                Expr result_pc = curr_bb.structGet( 0, result );
-                Expr result_reg = curr_bb.structGet( 1, result );
-                Expr result_ram = curr_bb.structGet( 2, result );
+                Expr result_reg = curr_bb.structGet( 0, result );
+                Expr result_ram = curr_bb.structGet( 1, result );
+                Expr result_pc  = curr_bb.structGet( 2, result );
 
                 // Set ram and register state to results from function override
                 curr_bb.write( reg, result_reg );
