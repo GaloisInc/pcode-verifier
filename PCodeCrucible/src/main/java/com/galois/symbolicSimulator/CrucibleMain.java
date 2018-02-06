@@ -56,13 +56,20 @@ class CrucibleMain {
             PCodeTranslator translator = new PCodeTranslator( sim, prog, abi, "pcodeCFG" );
 
             // Set up any call site overrides...
-            Map<BigInteger, FunctionHandle> ovrs = new HashMap();
+            // Map<BigInteger, FunctionHandle> ovrs = new HashMap();
 
-            VerificationHarness testHarness = setupTestHarness();
-            FunctionHandle testOvr = sim.compileHarness( testHarness );
-            ovrs.put( BigInteger.valueOf(0x35l), testOvr );
+            // VerificationHarness testHarness = setupTestHarness();
+            // FunctionHandle testOvr = sim.compileHarness( testHarness );
+            // ovrs.put( BigInteger.valueOf(0x35l), testOvr );
 
-            translator.setCallSiteOverrides( ovrs );
+            // translator.setCallSiteOverrides( ovrs );
+
+            Varnode vn = new Varnode( prog, "register", BigInteger.valueOf(0x38l), 4 );
+            translator.addVariableWatch( new WatchDirect( BigInteger.valueOf(0x35l), "n", vn ) );
+
+            Varnode sp = new Varnode( prog, "register", BigInteger.valueOf(0x28l), 8 );
+            BigInteger off = BigInteger.valueOf( -4l );
+            translator.addVariableWatch( new WatchIndirect( BigInteger.valueOf( 0x43l ), "fact return value", sp, "ram", new BigInteger[] { off }, 4 ) );
 
             // Setup a machine state to execute
             MachineState machine = new MachineState( sim, translator.getProc(), prog, abi );
@@ -116,7 +123,7 @@ class CrucibleMain {
         SimulatorValue retAddr = machine.makeWord( 0xdeadbeefl );
         machine.initStack( BigInteger.valueOf( 0x4000l ));
 
-        SimulatorValue arg = machine.makeWord( 3 );
+        SimulatorValue arg = machine.makeWord( 5 );
         SimulatorValue result = machine.callFunction( retAddr, "_fact", arg );
 
         System.out.println( "Result: " + result.toString() );

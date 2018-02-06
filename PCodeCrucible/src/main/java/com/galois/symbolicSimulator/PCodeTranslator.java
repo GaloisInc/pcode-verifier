@@ -52,6 +52,9 @@ public class PCodeTranslator {
     // Function call site overrides
     Map<BigInteger, FunctionHandle> callSiteOverrides;
 
+    // Variable watches
+    Map< BigInteger, List<Watch> > variableWatches;
+
     public PCodeTranslator( Simulator sim, PCodeProgram prog, ABI abi, String procName )
     {
         this(sim, prog, abi, procName, null);
@@ -67,10 +70,32 @@ public class PCodeTranslator {
         this.procName = procName;
         this.loc_path = loc_path;
         this.callSiteOverrides = Collections.emptyMap();
+        this.variableWatches = new HashMap<BigInteger,List<Watch>>();
     }
 
     public void setCallSiteOverrides( Map<BigInteger, FunctionHandle> overrides ) {
         this.callSiteOverrides = overrides;
+        proc = null; // changing this effectively invalidates proc
+    }
+
+    public void setVariableWatches( List<Watch> watches ) {
+        variableWatches = new HashMap<BigInteger,List<Watch>>();
+        addVariableWatches( watches );
+    }
+
+    public void addVariableWatches( List<Watch> watches ) {
+        for( Watch w : watches ) {
+            addVariableWatch( w );
+        }
+    }
+
+    public void addVariableWatch( Watch w ) {
+        List<Watch> lw = variableWatches.get( w.instrAddress );
+        if( lw == null ) {
+            lw = new LinkedList<Watch>();
+            variableWatches.put( w.instrAddress, lw );
+        }
+        lw.add( w );
         proc = null; // changing this effectively invalidates proc
     }
 
@@ -429,6 +454,69 @@ public class PCodeTranslator {
         curr_bb.branch( is_conc, trampoline, warn_blk );
     }
 
+    private void installVariableWatches( Block bb, BigInteger macroPC ) throws Exception {
+        List<Watch> ws = variableWatches.get( macroPC );
+        if( ws != null ) {
+            for( Watch w : ws ) {
+                installVariableWatch( bb, w );
+            }
+        }
+    }
+
+    private void installVariableWatch( Block bb, Watch w ) throws Exception {
+        Expr e;
+
+        String msg = "==WATCH== PC: 0x" + w.instrAddress.toString( 16 ) + " " + w.comment + "\n";
+        bb.print( msg );
+
+        if( w instanceof WatchDirect ) {
+
+            WatchDirect wd = (WatchDirect) w;
+            e = getInput( wd.location );
+
+        } else if( w instanceof WatchIndirect ) {
+            WatchIndirect wi = (WatchIndirect) w;
+            AddrSpaceManager s = getSpace( wi.space_id );
+            int len = wi.offsets.length;
+
+            if( !(s instanceof RAMAddrSpace) ) {
+                throw new IllegalArgumentException("Indirect variable watch must reference a RAM address space.");
+            }
+
+            RAMAddrSpace ram = (RAMAddrSpace) s;
+
+            if( len < 1 ) {
+                throw new IllegalArgumentException("Indirect variable watch must have at least one offest value.");
+            }
+
+            // Start with the base pointer
+            e = getInput ( wi.base );
+
+            // Follow the indirection chain
+            for (int i=1; i < len-1; i++) {
+                if( !wi.offsets[i].equals( BigInteger.ZERO ) ) {
+                    Expr off = bb.bvLiteral( addrWidth, wi.offsets[i] );
+                    e = bb.bvAdd( e, off );
+                }
+                e = ram.peek( bb, e, byteWidth );
+            }
+
+            // Load the final value
+            if( !wi.offsets[len-1].equals( BigInteger.ZERO ) ) {
+                Expr off = bb.bvLiteral( addrWidth, wi.offsets[len-1] );
+                e = bb.bvAdd( e, off );
+            }
+            e = ram.peek( bb, e, wi.size );
+
+        } else {
+            throw new IllegalArgumentException("Unknown variable watch type " + w.toString() );
+        }
+
+        Expr se = bb.showValue( e );
+        bb.print( se );
+        bb.print( "\n" );
+    }
+
     void addOpToBlock( String path, PCodeOp o, int microPC ) throws Exception
     {
         //System.out.println( o.toString() );
@@ -450,6 +538,12 @@ public class PCodeTranslator {
 
         // Debugging information
         // curr_bb.print("Executing instruction at: " + o.offset.toString(16) + "\n" );
+
+        // Check if we are at the first microinstruction at a given macroinstruction address
+        // In this case, install any defined variable watches.
+        if( o.uniq == 0 ) {
+            installVariableWatches( bb, o.offset );
+        }
 
         switch( o.opcode ) {
         case COPY:
