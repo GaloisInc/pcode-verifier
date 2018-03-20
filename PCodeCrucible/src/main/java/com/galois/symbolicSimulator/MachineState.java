@@ -45,6 +45,10 @@ public class MachineState {
         return abi;
     }
 
+    public Procedure getProc() {
+        return proc;
+    }
+
     public SimulatorValue makeWord( BigInteger val ) {
         return sim.bvLiteral( addrWidth, val );
     }

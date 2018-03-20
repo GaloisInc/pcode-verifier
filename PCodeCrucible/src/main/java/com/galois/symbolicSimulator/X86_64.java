@@ -9,10 +9,10 @@ import com.galois.crucible.cfg.*;
 // === Here are a bunch of definitions relevant to the X86_64 ABI ===
 // These are reverse-engineered from the PCode samples we have.
 public class X86_64 extends ABI {
-    static final int addrWidth = 64;
-    static final int addrBytes = 8;
-    //static final int regWidth = 14; // number of bits required to address all the registers
-    static final int regWidth = 64; // number of bits required to address all the registers
+    public static final int addrWidth = 64;
+    public static final int addrBytes = 8;
+    public static final int regWidth = 14; // number of bits required to address all the registers
+    //static final int regWidth = 64; // number of bits required to address all the registers
 
     PCodeArchSpec arch;
     Simulator sim;

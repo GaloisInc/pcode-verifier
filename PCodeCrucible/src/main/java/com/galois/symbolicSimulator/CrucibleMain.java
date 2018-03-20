@@ -64,17 +64,21 @@ class CrucibleMain {
 
             // translator.setCallSiteOverrides( ovrs );
 
-            Varnode vn = new Varnode( prog, "register", BigInteger.valueOf(0x38l), 4 );
-            translator.addVariableWatch( new WatchDirect( BigInteger.valueOf(0x35l), "n", vn ) );
+            // Varnode vn = new Varnode( prog, "register", BigInteger.valueOf(0x38l), 4 );
+            // translator.addVariableWatch( new WatchDirect( BigInteger.valueOf(0x35l), "n", vn ) );
 
-            Varnode sp = new Varnode( prog, "register", BigInteger.valueOf(0x28l), 8 );
-            BigInteger off = BigInteger.valueOf( -4l );
-            translator.addVariableWatch( new WatchIndirect( BigInteger.valueOf( 0x43l ), "fact return value", sp, "ram", new BigInteger[] { off }, 4 ) );
+            // Varnode sp = new Varnode( prog, "register", BigInteger.valueOf(0x28l), 8 );
+            // BigInteger off = BigInteger.valueOf( -4l );
+            // translator.addVariableWatch( new WatchIndirect( BigInteger.valueOf( 0x43l ), "fact return value", sp, "ram", new BigInteger[] { off }, 4 ) );
 
             // Setup a machine state to execute
             MachineState machine = new MachineState( sim, translator.getProc(), prog, abi );
 
-            testFact( sim, machine );
+            verifyQR( sim, machine );
+
+            //verifyFact( sim, machine );
+
+            //testFact( sim, machine );
             //testEx( sim, machine );
             //testS20_expand32( sim, machine );
             //testS20_hash( sim, machine );
@@ -101,9 +105,10 @@ class CrucibleMain {
         }
     }
 
+
     public static VerificationHarness setupTestHarness()
     {
-        VerificationHarness harness = new VerificationHarness("testHarness", 64, Protos.Endianness.LittleEndian);
+        VerificationHarness harness = new VerificationHarness("testHarness", X86_64.regWidth, X86_64.addrWidth, Protos.Endianness.LittleEndian);
         Protos.VariableReference x = harness.prestate().addVar( "x", 32 );
 
         harness.prestate().assignRegister( X86_64.rdi.longValue(), x );
@@ -117,13 +122,97 @@ class CrucibleMain {
         return harness;
     }
 
+
+    public static VerificationHarness setupQuarterroundHarness()
+    {
+        VerificationHarness harness = new VerificationHarness( "quarterroundHarness", X86_64.regWidth, X86_64.addrWidth, Protos.Endianness.LittleEndian );
+
+        harness.addCryptolSource( "PCodeXML-examples/Salsa20.cry" );
+
+        harness.prestate().assignRegister( X86_64.rsp.longValue(), harness.stackVar );
+        harness.prestate().assignMemory( VerificationHarness.stackVar, 0x0, harness.returnVar );
+
+        Protos.VariableReference y0 = harness.prestate().addVar( "y0", 32 );
+        Protos.VariableReference y1 = harness.prestate().addVar( "y1", 32 );
+        Protos.VariableReference y2 = harness.prestate().addVar( "y2", 32 );
+        Protos.VariableReference y3 = harness.prestate().addVar( "y3", 32 );
+
+        Protos.VariableReference p0 = harness.prestate().addVar( "p0", 64 );
+        Protos.VariableReference p1 = harness.prestate().addVar( "p1", 64 );
+        Protos.VariableReference p2 = harness.prestate().addVar( "p2", 64 );
+        Protos.VariableReference p3 = harness.prestate().addVar( "p3", 64 );
+
+        harness.prestate().bindVariable( p0, "zero # 0x8000" );
+        harness.prestate().bindVariable( p1, "p0 + 8" );
+        harness.prestate().bindVariable( p2, "p0 + 16" );
+        harness.prestate().bindVariable( p3, "p0 + 24" );
+
+        harness.prestate().assignMemory( p0, 0x0, y0 );
+        harness.prestate().assignMemory( p1, 0x0, y1 );
+        harness.prestate().assignMemory( p2, 0x0, y2 );
+        harness.prestate().assignMemory( p3, 0x0, y3 );
+
+        harness.prestate().assignRegister( 0x38, p0 );
+        harness.prestate().assignRegister( 0x30, p1 );
+        harness.prestate().assignRegister( 0x10, p2 );
+        harness.prestate().assignRegister( 0x08, p3 );
+
+        Protos.VariableReference z0 = harness.poststate().addVar( "z0", 32 );
+        Protos.VariableReference z1 = harness.poststate().addVar( "z1", 32 );
+        Protos.VariableReference z2 = harness.poststate().addVar( "z2", 32 );
+        Protos.VariableReference z3 = harness.poststate().addVar( "z3", 32 );
+
+        harness.poststate().assignMemory( p0, 0x0, z0 );
+        harness.poststate().assignMemory( p1, 0x0, z1 );
+        harness.poststate().assignMemory( p2, 0x0, z2 );
+        harness.poststate().assignMemory( p3, 0x0, z3 );
+
+        harness.poststate().assertCondition( "quarterround [y0,y1,y2,y3] == [z0,z1,z2,z3]" );
+
+        return harness;
+    }
+
+    public static void verifyQR( SAWSimulator sim, MachineState machine )
+        throws Exception
+    {
+        sim.setPathSatChecking(false);
+
+        VerificationOptions opts = new VerificationOptions();
+        opts.setProgram( machine.getProc() );
+        opts.setReturnAddress( machine.makeWord( 0xdeadbeefl ) );
+        opts.setStartStack( machine.makeWord( 0x4000l ) );
+        opts.setStartPC( machine.getEntryPoint( "_s20_quarterround" ) );
+        opts.setOutputDirectory( "." );
+        opts.setSeparateObligations( false );
+
+        VerificationHarness testHarness = setupQuarterroundHarness();
+        sim.produceVerificationGoals( testHarness, opts );
+    }
+
+    public static void verifyFact( SAWSimulator sim, MachineState machine )
+        throws Exception
+    {
+        sim.setPathSatChecking(false);
+
+        VerificationOptions opts = new VerificationOptions();
+        opts.setProgram( machine.getProc() );
+        opts.setReturnAddress( machine.makeWord( 0xdeadbeefl ) );
+        opts.setStartStack( machine.makeWord( 0x4000l ) );
+        opts.setStartPC( machine.getEntryPoint( "_fact" ) );
+        opts.setOutputDirectory( "." );
+        opts.setSeparateObligations( false );
+
+        VerificationHarness testHarness = setupTestHarness();
+        sim.produceVerificationGoals( testHarness, opts );
+    }
+
     public static void testFact( SAWSimulator sim, MachineState machine )
         throws Exception
     {
         SimulatorValue retAddr = machine.makeWord( 0xdeadbeefl );
         machine.initStack( BigInteger.valueOf( 0x4000l ));
 
-        SimulatorValue arg = machine.makeWord( 5 );
+        SimulatorValue arg = machine.makeWord( 8 );
         SimulatorValue result = machine.callFunction( retAddr, "_fact", arg );
 
         System.out.println( "Result: " + result.toString() );
