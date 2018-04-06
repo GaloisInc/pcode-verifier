@@ -74,7 +74,8 @@ class CrucibleMain {
             // Setup a machine state to execute
             MachineState machine = new MachineState( sim, translator.getProc(), prog, abi );
 
-            verifyQR( sim, machine );
+            verifyRowRound( sim, machine );
+            //verifyQR( sim, machine );
 
             //verifyFact( sim, machine );
 
@@ -122,6 +123,32 @@ class CrucibleMain {
         return harness;
     }
 
+    public static VerificationHarness setupRowround()
+    {
+        VerificationHarness harness = new VerificationHarness( "rowroundHarness", X86_64.regWidth, X86_64.addrWidth, Protos.Endianness.LittleEndian );
+        harness.addCryptolSource( "PCodeXML-examples/Salsa20.cry" );
+
+        harness.prestate().assignRegister( X86_64.rsp.longValue(), harness.stackVar );
+        harness.prestate().assignMemory( VerificationHarness.stackVar, 0x0, harness.returnVar );
+
+        // Set up an array of uint32_t[16]
+        Protos.VariableReference y = harness.prestate().addVar( "y", 16, 32 );
+        Protos.VariableReference p = harness.prestate().addVar( "p", 64 );
+
+        // Arbitrary place for our buffer
+        harness.prestate().bindVariable( p, "zero # 0x8000" );
+        harness.prestate().assignMemory( p, 0x0, y );
+        harness.prestate().assignRegister( 0x38, p );
+
+        // Set up an array of uint32_t[16]
+        Protos.VariableReference z = harness.poststate().addVar( "z", 16, 32 );
+        // Read the buffer from p
+        harness.poststate().assignMemory( p, 0x0, z );
+
+        // Assert the correctness condition
+        harness.poststate().assertCondition( "rowround y == z" );
+        return harness;
+    }
 
     public static VerificationHarness setupQuarterroundHarness()
     {
@@ -170,6 +197,24 @@ class CrucibleMain {
         harness.poststate().assertCondition( "quarterround [y0,y1,y2,y3] == [z0,z1,z2,z3]" );
 
         return harness;
+    }
+
+    public static void verifyRowRound( SAWSimulator sim, MachineState machine )
+        throws Exception
+    {
+        sim.setPathSatChecking(false);
+        
+        VerificationOptions opts = new VerificationOptions();
+        
+        opts.setProgram( machine.getProc() );
+        opts.setReturnAddress( machine.makeWord( 0xdeadbeefl ) );
+        opts.setStartStack( machine.makeWord( 0x4000l ) );
+        opts.setStartPC( machine.getEntryPoint( "_s20_rowround" ) );
+        opts.setOutputDirectory( "." );
+        opts.setSeparateObligations( false );
+
+        VerificationHarness testHarness = setupRowround();
+        sim.produceVerificationGoals( testHarness, opts );
     }
 
     public static void verifyQR( SAWSimulator sim, MachineState machine )
